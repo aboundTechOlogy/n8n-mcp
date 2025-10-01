@@ -1105,6 +1105,684 @@ export async function handleDeleteExecution(args: unknown, context?: InstanceCon
 
 // System Tools Handlers
 
+/**
+ * Retry a failed execution
+ */
+export async function handleRetryExecution(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { id } = z.object({ id: z.string() }).parse(args);
+
+    // Get the original execution to get workflow ID and input data
+    const execution = await client.getExecution(id);
+    if (!execution || execution.status !== 'error') {
+      return {
+        success: false,
+        error: 'Execution not found or not in error state'
+      };
+    }
+
+    // Trigger new execution with same data
+    const newExecution = await client.executeWorkflow(execution.workflowId, execution.data);
+
+    return {
+      success: true,
+      data: {
+        executionId: newExecution.id
+      },
+      message: `Retried execution ${id} as new execution ${newExecution.id}`
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Cancel a running execution
+ */
+export async function handleCancelExecution(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { id } = z.object({ id: z.string() }).parse(args);
+
+    await client.stopExecution(id);
+
+    return {
+      success: true,
+      message: `Execution ${id} cancelled`
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Stop all executions for a workflow
+ */
+export async function handleStopAllExecutions(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { workflowId } = z.object({ workflowId: z.string() }).parse(args);
+
+    // Get running executions
+    const executions = await client.listExecutions({
+      workflowId,
+      status: ExecutionStatus.WAITING
+    });
+
+    const stopped = [];
+    for (const exec of executions.data || []) {
+      try {
+        await client.stopExecution(exec.id);
+        stopped.push(exec.id);
+      } catch (e) {
+        // Continue stopping others even if one fails
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        executionIds: stopped
+      },
+      message: `Stopped ${stopped.length} executions`
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Get execution data with node details
+ */
+export async function handleGetExecutionData(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { id, nodeNames } = z.object({
+      id: z.string(),
+      nodeNames: z.array(z.string()).optional()
+    }).parse(args);
+
+    const execution = await client.getExecution(id, true);
+
+    let nodeData = execution.data?.resultData?.runData || {};
+    if (nodeNames && nodeNames.length > 0) {
+      // Filter to specific nodes if requested
+      nodeData = Object.fromEntries(
+        Object.entries(nodeData || {}).filter(([key]) => nodeNames.includes(key))
+      );
+    }
+
+    return {
+      success: true,
+      data: {
+        executionId: id,
+        status: execution.status,
+        nodeData,
+        startedAt: execution.startedAt,
+        stoppedAt: execution.stoppedAt
+      }
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Get execution logs
+ */
+export async function handleGetExecutionLogs(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { id, includeNodeLogs } = z.object({
+      id: z.string(),
+      includeNodeLogs: z.boolean().optional().default(true)
+    }).parse(args);
+
+    const execution = await client.getExecution(id, true);
+
+    const logs = {
+      executionId: id,
+      status: execution.status,
+      error: execution.data?.resultData?.error,
+      startedAt: execution.startedAt,
+      stoppedAt: execution.stoppedAt,
+      duration: execution.stoppedAt && execution.startedAt ?
+        new Date(execution.stoppedAt).getTime() - new Date(execution.startedAt).getTime() : null
+    };
+
+    if (includeNodeLogs && execution.data?.resultData?.runData) {
+      const nodeLogs: any[] = [];
+      for (const [nodeName, nodeData] of Object.entries(execution.data.resultData.runData)) {
+        const runData = nodeData as any;
+        if (runData.error) {
+          nodeLogs.push({
+            node: nodeName,
+            error: runData.error,
+            executionTime: runData.executionTime
+          });
+        }
+      }
+      (logs as any)['nodeLogs'] = nodeLogs;
+    }
+
+    return {
+      success: true,
+      data: {
+        logs
+      }
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Create webhook for workflow
+ */
+export async function handleCreateWebhook(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { workflowId, path, method } = z.object({
+      workflowId: z.string(),
+      path: z.string().optional(),
+      method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).optional().default('POST')
+    }).parse(args);
+
+    // Get workflow to add webhook node
+    const workflow = await client.getWorkflow(workflowId);
+
+    // Create webhook trigger node
+    const webhookNode = {
+      id: `webhook_${Date.now()}`,
+      name: 'Webhook',
+      type: 'n8n-nodes-base.webhook',
+      typeVersion: 1,
+      position: [250, 300] as [number, number],
+      parameters: {
+        path: path || `webhook-${workflowId}`,
+        responseMode: 'onReceived',
+        httpMethod: method
+      }
+    };
+
+    // Add to workflow
+    workflow.nodes.push(webhookNode);
+    await client.updateWorkflow(workflowId, workflow);
+
+    const webhookUrl = `${client.apiUrl}/webhook/${path || `webhook-${workflowId}`}`;
+
+    return {
+      success: true,
+      data: {
+        webhookUrl,
+        method
+      },
+      message: 'Webhook created. Activate the workflow to enable it.'
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Delete webhook from workflow
+ */
+export async function handleDeleteWebhook(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { workflowId, webhookId } = z.object({
+      workflowId: z.string(),
+      webhookId: z.string()
+    }).parse(args);
+
+    const workflow = await client.getWorkflow(workflowId);
+
+    // Remove webhook node
+    workflow.nodes = workflow.nodes.filter(node =>
+      node.id !== webhookId && node.name !== webhookId
+    );
+
+    await client.updateWorkflow(workflowId, workflow);
+
+    return {
+      success: true,
+      message: `Webhook ${webhookId} deleted from workflow ${workflowId}`
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * List webhooks for workflow
+ */
+export async function handleListWebhooks(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { workflowId } = z.object({
+      workflowId: z.string().optional()
+    }).parse(args);
+
+    const workflows = workflowId ?
+      [await client.getWorkflow(workflowId)] :
+      (await client.listWorkflows()).data;
+
+    const webhooks = [];
+    for (const workflow of workflows) {
+      const webhookNodes = workflow.nodes.filter(node =>
+        node.type === 'n8n-nodes-base.webhook' ||
+        node.type === 'n8n-nodes-base.webhookTrigger'
+      );
+
+      for (const node of webhookNodes) {
+        webhooks.push({
+          workflowId: workflow.id,
+          workflowName: workflow.name,
+          nodeId: node.id,
+          nodeName: node.name,
+          path: node.parameters?.path,
+          method: node.parameters?.httpMethod || 'POST',
+          active: workflow.active
+        });
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        webhooks,
+        count: webhooks.length
+      }
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Test webhook with sample data
+ */
+export async function handleTestWebhook(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { webhookUrl, testData, headers } = z.object({
+      webhookUrl: z.string(),
+      testData: z.object({}).passthrough().optional().default({}),
+      headers: z.object({}).passthrough().optional()
+    }).parse(args);
+
+    // Make HTTP request to webhook
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers
+      },
+      body: JSON.stringify(testData)
+    });
+
+    return {
+      success: response.ok,
+      data: {
+        statusCode: response.status,
+        response: await response.text()
+      },
+      message: response.ok ? 'Webhook test successful' : 'Webhook test failed'
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Get webhook logs
+ */
+export async function handleGetWebhookLogs(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { workflowId, limit } = z.object({
+      workflowId: z.string(),
+      limit: z.number().optional().default(10)
+    }).parse(args);
+
+    // Get recent executions for webhook workflow
+    const executions = await client.listExecutions({
+      workflowId,
+      limit
+    });
+
+    const logs = executions.data?.map(exec => ({
+      executionId: exec.id,
+      status: exec.status,
+      startedAt: exec.startedAt,
+      stoppedAt: exec.stoppedAt,
+      mode: exec.mode,
+      error: exec.data?.resultData?.error
+    })) || [];
+
+    return {
+      success: true,
+      data: {
+        workflowId,
+        logs,
+        count: logs.length
+      }
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Activate workflow
+ */
+export async function handleActivateWorkflow(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { id } = z.object({ id: z.string() }).parse(args);
+
+    const workflow = await client.getWorkflow(id);
+    workflow.active = true;
+    await client.updateWorkflow(id, workflow);
+
+    return {
+      success: true,
+      data: {
+        workflowId: id,
+        active: true
+      },
+      message: `Workflow ${id} activated successfully`
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Deactivate workflow
+ */
+export async function handleDeactivateWorkflow(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { id } = z.object({ id: z.string() }).parse(args);
+
+    const workflow = await client.getWorkflow(id);
+    workflow.active = false;
+    await client.updateWorkflow(id, workflow);
+
+    return {
+      success: true,
+      data: {
+        workflowId: id,
+        active: false
+      },
+      message: `Workflow ${id} deactivated successfully`
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Duplicate workflow
+ */
+export async function handleDuplicateWorkflow(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { id, name } = z.object({
+      id: z.string(),
+      name: z.string().optional()
+    }).parse(args);
+
+    const originalWorkflow = await client.getWorkflow(id);
+
+    // Create new workflow with copied data
+    const newWorkflow = {
+      ...originalWorkflow,
+      id: undefined, // Let n8n assign new ID
+      name: name || `Copy of ${originalWorkflow.name}`,
+      active: false, // Start inactive
+      createdAt: undefined,
+      updatedAt: undefined
+    };
+
+    const created = await client.createWorkflow(newWorkflow);
+
+    return {
+      success: true,
+      data: {
+        originalId: id,
+        newId: created.id,
+        newName: created.name
+      },
+      message: `Workflow duplicated successfully`
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Apply template to workflow
+ */
+export async function handleApplyTemplate(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { templateId, workflowId, name } = z.object({
+      templateId: z.string(),
+      workflowId: z.string().optional(),
+      name: z.string().optional()
+    }).parse(args);
+
+    // Get template (assuming it's stored as a workflow)
+    const template = await client.getWorkflow(templateId);
+
+    if (workflowId) {
+      // Apply to existing workflow
+      const workflow = await client.getWorkflow(workflowId);
+      workflow.nodes = template.nodes;
+      workflow.connections = template.connections;
+      workflow.settings = { ...workflow.settings, ...template.settings };
+
+      await client.updateWorkflow(workflowId, workflow);
+
+      return {
+        success: true,
+        data: {
+          workflowId
+        },
+        message: `Template applied to workflow ${workflowId}`
+      };
+    } else {
+      // Create new workflow from template
+      const newWorkflow = {
+        ...template,
+        id: undefined,
+        name: name || `New from ${template.name}`,
+        active: false
+      };
+
+      const created = await client.createWorkflow(newWorkflow);
+
+      return {
+        success: true,
+        data: {
+          workflowId: created.id,
+          name: created.name
+        },
+        message: `New workflow created from template`
+      };
+    }
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Create template from workflow
+ */
+export async function handleCreateTemplate(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { workflowId, name, description } = z.object({
+      workflowId: z.string(),
+      name: z.string(),
+      description: z.string().optional()
+    }).parse(args);
+
+    const workflow = await client.getWorkflow(workflowId);
+
+    // Create template (stored as inactive workflow with special tags)
+    const template = {
+      ...workflow,
+      id: undefined,
+      name: `[Template] ${name}`,
+      // Note: description field not supported in current n8n API types
+      active: false,
+      tags: [...(workflow.tags || []), 'template', ...(description ? [`desc:${description}`] : [])],
+      settings: {
+        ...workflow.settings,
+        isTemplate: true
+      }
+    };
+
+    const created = await client.createWorkflow(template);
+
+    return {
+      success: true,
+      data: {
+        templateId: created.id,
+        templateName: name,
+        sourceWorkflowId: workflowId
+      },
+      message: `Template created successfully`
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * Analyze workflow dependencies
+ */
+export async function handleAnalyzeDependencies(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { workflowId, nodeId } = z.object({
+      workflowId: z.string(),
+      nodeId: z.string().optional()
+    }).parse(args);
+
+    const workflow = await client.getWorkflow(workflowId);
+
+    // Build name-to-ID mapping
+    const nameToId = new Map<string, string>();
+    for (const node of workflow.nodes) {
+      nameToId.set(node.name, node.id);
+    }
+
+    // Build dependency graph
+    const dependencies: Record<string, string[]> = {};
+    const dependents: Record<string, string[]> = {};
+
+    // Initialize all nodes
+    for (const node of workflow.nodes) {
+      dependencies[node.id] = [];
+      dependents[node.id] = [];
+    }
+
+    // Analyze connections
+    for (const [sourceName, connections] of Object.entries(workflow.connections)) {
+      const sourceId = nameToId.get(sourceName);
+      if (!sourceId) continue;
+
+      for (const [, targetConnections] of Object.entries(connections)) {
+        for (const connection of targetConnections) {
+          for (const target of connection) {
+            const targetId = nameToId.get(target.node);
+            if (!targetId) continue;
+
+            dependencies[targetId].push(sourceId);
+            dependents[sourceId].push(targetId);
+          }
+        }
+      }
+    }
+
+    // Find trigger nodes
+    const triggerNodes = workflow.nodes.filter(node =>
+      node.type.includes('trigger') || node.type.includes('webhook')
+    ).map(n => n.id);
+
+    // Find terminal nodes (no dependents)
+    const terminalNodes = Object.entries(dependents)
+      .filter(([, deps]) => (deps as string[]).length === 0)
+      .map(([nodeId]) => nodeId);
+
+    if (nodeId) {
+      // Analyze specific node
+      return {
+        success: true,
+        data: {
+          nodeId,
+          dependencies: dependencies[nodeId] || [],
+          dependents: dependents[nodeId] || [],
+          isTrigger: triggerNodes.includes(nodeId),
+          isTerminal: terminalNodes.includes(nodeId)
+        }
+      };
+    } else {
+      // Full workflow analysis
+      const analysis = {
+        totalNodes: workflow.nodes.length,
+        totalConnections: Object.values(workflow.connections).reduce(
+          (acc, conn) => acc + Object.keys(conn).length, 0
+        ),
+        triggerNodes,
+        terminalNodes,
+        dependencies,
+        dependents,
+        executionOrder: [] // Could implement topological sort here
+      };
+
+      return {
+        success: true,
+        data: {
+          workflowId,
+          analysis
+        }
+      };
+    }
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+// Helper function for consistent error handling
+function handleApiError(error: unknown): McpToolResponse {
+  if (error instanceof z.ZodError) {
+    return {
+      success: false,
+      error: 'Invalid input',
+      details: { errors: error.errors }
+    };
+  }
+
+  if (error instanceof N8nApiError) {
+    return {
+      success: false,
+      error: getUserFriendlyErrorMessage(error),
+      code: error.code
+    };
+  }
+
+  return {
+    success: false,
+    error: error instanceof Error ? error.message : 'Unknown error occurred'
+  };
+}
+
 export async function handleHealthCheck(context?: InstanceContext): Promise<McpToolResponse> {
   try {
     const client = ensureApiConfigured(context);

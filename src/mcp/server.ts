@@ -562,14 +562,50 @@ export class N8NDocumentationMCPServer {
       case 'n8n_autofix_workflow':
       case 'n8n_get_execution':
       case 'n8n_delete_execution':
+      case 'n8n_retry_execution':
+      case 'n8n_cancel_execution':
+      case 'n8n_get_execution_data':
+      case 'n8n_get_execution_logs':
         validationResult = ToolValidation.validateWorkflowId(args);
+        break;
+      case 'n8n_stop_execution':
+      case 'n8n_create_webhook':
+      case 'n8n_delete_webhook':
+      case 'n8n_list_webhooks':
+      case 'n8n_get_webhook_logs':
+      case 'n8n_activate_workflow':
+      case 'n8n_deactivate_workflow':
+      case 'n8n_duplicate_workflow':
+        validationResult = ToolValidation.validateWorkflowId(args);
+        break;
+      case 'n8n_analyze_dependencies':
+        // Uses workflowId instead of id
+        validationResult = Validator.validateString(args['workflowId'], 'workflowId');
+        break;
+      case 'n8n_apply_template':
+        // Requires templateId
+        if (!args || typeof args !== 'object' || !args['templateId']) {
+          throw new ValidationError('templateId is required');
+        }
+        break;
+      case 'n8n_create_template':
+        // Requires workflowId and name
+        if (!args || typeof args !== 'object' || !args['workflowId'] || !args['name']) {
+          throw new ValidationError('workflowId and name are required');
+        }
+        break;
+      case 'n8n_test_webhook':
+        // Basic validation for webhook URL
+        if (!args || typeof args !== 'object' || !args['webhookUrl']) {
+          throw new ValidationError('webhookUrl is required');
+        }
         break;
       default:
         // For tools not yet migrated to schema validation, use basic validation
         return this.validateToolParamsBasic(toolName, args, legacyRequiredParams || []);
       }
-      
-      if (!validationResult.valid) {
+
+      if (validationResult && !validationResult.valid) {
         const errorMessage = Validator.formatErrors(validationResult, toolName);
         logger.error(`Parameter validation failed for ${toolName}:`, errorMessage);
         throw new ValidationError(errorMessage);
@@ -889,6 +925,65 @@ export class N8NDocumentationMCPServer {
       case 'n8n_delete_execution':
         this.validateToolParams(name, args, ['id']);
         return n8nHandlers.handleDeleteExecution(args, this.instanceContext);
+
+      // New Execution Tools
+      case 'n8n_retry_execution':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleRetryExecution(args, this.instanceContext);
+      case 'n8n_cancel_execution':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleCancelExecution(args, this.instanceContext);
+      case 'n8n_stop_execution':
+        this.validateToolParams(name, args, ['workflowId']);
+        return n8nHandlers.handleStopAllExecutions(args, this.instanceContext);
+      case 'n8n_get_execution_data':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleGetExecutionData(args, this.instanceContext);
+      case 'n8n_get_execution_logs':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleGetExecutionLogs(args, this.instanceContext);
+
+      // New Webhook Tools
+      case 'n8n_create_webhook':
+        this.validateToolParams(name, args, ['workflowId']);
+        return n8nHandlers.handleCreateWebhook(args, this.instanceContext);
+      case 'n8n_delete_webhook':
+        this.validateToolParams(name, args, ['workflowId', 'webhookId']);
+        return n8nHandlers.handleDeleteWebhook(args, this.instanceContext);
+      case 'n8n_list_webhooks':
+        // Optional workflowId
+        return n8nHandlers.handleListWebhooks(args, this.instanceContext);
+      case 'n8n_test_webhook':
+        this.validateToolParams(name, args, ['webhookUrl']);
+        return n8nHandlers.handleTestWebhook(args, this.instanceContext);
+      case 'n8n_get_webhook_logs':
+        this.validateToolParams(name, args, ['workflowId']);
+        return n8nHandlers.handleGetWebhookLogs(args, this.instanceContext);
+
+      // Workflow Operation Tools
+      case 'n8n_activate_workflow':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleActivateWorkflow(args, this.instanceContext);
+      case 'n8n_deactivate_workflow':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleDeactivateWorkflow(args, this.instanceContext);
+      case 'n8n_duplicate_workflow':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleDuplicateWorkflow(args, this.instanceContext);
+
+      // Template Tools
+      case 'n8n_apply_template':
+        this.validateToolParams(name, args, ['templateId']);
+        return n8nHandlers.handleApplyTemplate(args, this.instanceContext);
+      case 'n8n_create_template':
+        this.validateToolParams(name, args, ['workflowId', 'name']);
+        return n8nHandlers.handleCreateTemplate(args, this.instanceContext);
+
+      // Analysis Tools
+      case 'n8n_analyze_dependencies':
+        this.validateToolParams(name, args, ['workflowId']);
+        return n8nHandlers.handleAnalyzeDependencies(args, this.instanceContext);
+
       case 'n8n_health_check':
         // No required parameters
         return n8nHandlers.handleHealthCheck(this.instanceContext);

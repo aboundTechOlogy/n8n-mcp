@@ -405,6 +405,297 @@ export const n8nManagementTools: ToolDefinition[] = [
     }
   },
 
+  // Additional Execution Tools
+  {
+    name: 'n8n_retry_execution',
+    description: `Retry a failed execution with the same input data. Useful for transient errors.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'ID of the failed execution to retry'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'n8n_cancel_execution',
+    description: `Cancel a currently running execution. Stops the workflow mid-process.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'ID of the running execution to cancel'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'n8n_stop_execution',
+    description: `Stop all running executions for a workflow. Emergency stop for runaway workflows.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workflowId: {
+          type: 'string',
+          description: 'Workflow ID to stop all executions'
+        }
+      },
+      required: ['workflowId']
+    }
+  },
+  {
+    name: 'n8n_get_execution_data',
+    description: `Get detailed input/output data for an execution. Shows what data flowed through each node.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Execution ID'
+        },
+        nodeNames: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional: Specific nodes to get data for'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'n8n_get_execution_logs',
+    description: `Get execution logs and error details. Useful for debugging failed executions.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Execution ID'
+        },
+        includeNodeLogs: {
+          type: 'boolean',
+          description: 'Include detailed node-level logs (default: true)'
+        }
+      },
+      required: ['id']
+    }
+  },
+
+  // Webhook Management Tools
+  {
+    name: 'n8n_create_webhook',
+    description: `Create a webhook endpoint for a workflow. Returns the webhook URL to call.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workflowId: {
+          type: 'string',
+          description: 'Workflow ID to create webhook for'
+        },
+        path: {
+          type: 'string',
+          description: 'Custom webhook path (optional)'
+        },
+        method: {
+          type: 'string',
+          enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+          description: 'HTTP method (default: POST)'
+        }
+      },
+      required: ['workflowId']
+    }
+  },
+  {
+    name: 'n8n_delete_webhook',
+    description: `Delete a webhook endpoint from a workflow.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workflowId: {
+          type: 'string',
+          description: 'Workflow ID'
+        },
+        webhookId: {
+          type: 'string',
+          description: 'Webhook ID to delete'
+        }
+      },
+      required: ['workflowId', 'webhookId']
+    }
+  },
+  {
+    name: 'n8n_list_webhooks',
+    description: `List all webhooks for a workflow or all workflows.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workflowId: {
+          type: 'string',
+          description: 'Optional: Filter by workflow ID'
+        }
+      }
+    }
+  },
+  {
+    name: 'n8n_test_webhook',
+    description: `Test a webhook with sample data. Triggers a test execution.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        webhookUrl: {
+          type: 'string',
+          description: 'Full webhook URL to test'
+        },
+        testData: {
+          type: 'object',
+          description: 'Test payload to send'
+        },
+        headers: {
+          type: 'object',
+          description: 'Optional HTTP headers'
+        }
+      },
+      required: ['webhookUrl']
+    }
+  },
+  {
+    name: 'n8n_get_webhook_logs',
+    description: `Get webhook call logs and history. Shows recent webhook invocations.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workflowId: {
+          type: 'string',
+          description: 'Workflow ID'
+        },
+        limit: {
+          type: 'number',
+          description: 'Number of log entries (default: 10)'
+        }
+      },
+      required: ['workflowId']
+    }
+  },
+
+  // Workflow Operation Tools
+  {
+    name: 'n8n_activate_workflow',
+    description: `Activate a workflow to enable execution. Required for webhooks and scheduled triggers.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Workflow ID to activate'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'n8n_deactivate_workflow',
+    description: `Deactivate a workflow to stop execution. Useful for maintenance or debugging.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Workflow ID to deactivate'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'n8n_duplicate_workflow',
+    description: `Create a copy of an existing workflow. Useful for creating variations or backups.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Workflow ID to duplicate'
+        },
+        name: {
+          type: 'string',
+          description: 'Optional name for the duplicate (default: "Copy of [original]")'
+        }
+      },
+      required: ['id']
+    }
+  },
+
+  // Template Tools
+  {
+    name: 'n8n_apply_template',
+    description: `Apply a template to an existing workflow or create new from template.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        templateId: {
+          type: 'string',
+          description: 'Template ID to apply'
+        },
+        workflowId: {
+          type: 'string',
+          description: 'Optional: Existing workflow to apply template to'
+        },
+        name: {
+          type: 'string',
+          description: 'Name for new workflow (if not updating existing)'
+        }
+      },
+      required: ['templateId']
+    }
+  },
+  {
+    name: 'n8n_create_template',
+    description: `Create a reusable template from an existing workflow.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workflowId: {
+          type: 'string',
+          description: 'Workflow ID to create template from'
+        },
+        name: {
+          type: 'string',
+          description: 'Template name'
+        },
+        description: {
+          type: 'string',
+          description: 'Template description'
+        }
+      },
+      required: ['workflowId', 'name']
+    }
+  },
+
+  // Analysis Tools
+  {
+    name: 'n8n_analyze_dependencies',
+    description: `Analyze workflow dependencies: which nodes depend on others, data flow paths.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workflowId: {
+          type: 'string',
+          description: 'Workflow ID to analyze'
+        },
+        nodeId: {
+          type: 'string',
+          description: 'Optional: Analyze dependencies for specific node'
+        }
+      },
+      required: ['workflowId']
+    }
+  },
+
   // System Tools
   {
     name: 'n8n_health_check',
