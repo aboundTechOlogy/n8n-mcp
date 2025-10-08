@@ -517,20 +517,23 @@ export async function handleUpdateWorkflow(args: unknown, context?: InstanceCont
     const client = ensureApiConfigured(context);
     const input = updateWorkflowSchema.parse(args);
     const { id, ...updateData } = input;
-    
+
+    // Fetch current workflow to get existing settings if not provided
+    const current = await client.getWorkflow(id);
+
+    // Ensure settings are always included (required by n8n API)
+    if (!updateData.settings && current.settings) {
+      updateData.settings = current.settings;
+    }
+
     // If nodes/connections are being updated, validate the structure
     if (updateData.nodes || updateData.connections) {
-      // Fetch current workflow if only partial update
-      let fullWorkflow = updateData as Partial<Workflow>;
-      
-      if (!updateData.nodes || !updateData.connections) {
-        const current = await client.getWorkflow(id);
-        fullWorkflow = {
-          ...current,
-          ...updateData
-        };
-      }
-      
+      // Build full workflow for validation
+      let fullWorkflow = {
+        ...current,
+        ...updateData
+      } as Partial<Workflow>;
+
       const errors = validateWorkflowStructure(fullWorkflow);
       if (errors.length > 0) {
         return {
@@ -540,10 +543,10 @@ export async function handleUpdateWorkflow(args: unknown, context?: InstanceCont
         };
       }
     }
-    
+
     // Update workflow
     const workflow = await client.updateWorkflow(id, updateData);
-    
+
     return {
       success: true,
       data: workflow,
@@ -557,7 +560,7 @@ export async function handleUpdateWorkflow(args: unknown, context?: InstanceCont
         details: { errors: error.errors }
       };
     }
-    
+
     if (error instanceof N8nApiError) {
       return {
         success: false,
@@ -566,7 +569,7 @@ export async function handleUpdateWorkflow(args: unknown, context?: InstanceCont
         details: error.details as Record<string, unknown> | undefined
       };
     }
-    
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -1441,10 +1444,30 @@ export async function handleTestWebhook(args: unknown, context?: InstanceContext
 export async function handleGetWebhookLogs(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
   try {
     const client = ensureApiConfigured(context);
-    const { workflowId, limit } = z.object({
-      workflowId: z.string(),
+
+    // Support both 'id' and 'workflowId' parameters for better UX
+    const parsed = z.object({
+      id: z.string().optional(),
+      workflowId: z.string().optional(),
       limit: z.number().optional().default(10)
     }).parse(args);
+
+    // Accept either parameter name
+    const workflowId = parsed.id || parsed.workflowId;
+
+    if (!workflowId) {
+      return {
+        success: false,
+        error: 'Missing required parameter: must provide either "id" or "workflowId"',
+        message: 'Please provide either "id" or "workflowId" parameter',
+        details: {
+          example: 'n8n_get_webhook_logs({workflowId: "abc123"})',
+          acceptedParameters: ['id', 'workflowId']
+        }
+      };
+    }
+
+    const limit = parsed.limit;
 
     // Get recent executions for webhook workflow
     const executions = await client.listExecutions({
@@ -1535,19 +1558,8 @@ export async function handleDuplicateWorkflow(args: unknown, context?: InstanceC
       name: z.string().optional()
     }).parse(args);
 
-    const originalWorkflow = await client.getWorkflow(id);
-
-    // Create new workflow with copied data
-    const newWorkflow = {
-      ...originalWorkflow,
-      id: undefined, // Let n8n assign new ID
-      name: name || `Copy of ${originalWorkflow.name}`,
-      active: false, // Start inactive
-      createdAt: undefined,
-      updatedAt: undefined
-    };
-
-    const created = await client.createWorkflow(newWorkflow);
+    // Use the API client's duplicateWorkflow method which handles cleaning properly
+    const created = await client.duplicateWorkflow(id, name);
 
     return {
       success: true,
@@ -1773,7 +1785,8 @@ function handleApiError(error: unknown): McpToolResponse {
     return {
       success: false,
       error: getUserFriendlyErrorMessage(error),
-      code: error.code
+      code: error.code,
+      details: error.details as Record<string, unknown> | undefined
     };
   }
 
@@ -1836,11 +1849,15 @@ export async function handleListAvailableTools(context?: InstanceContext): Promi
         { name: 'n8n_get_workflow_details', description: 'Get detailed workflow info with stats' },
         { name: 'n8n_get_workflow_structure', description: 'Get simplified workflow structure' },
         { name: 'n8n_get_workflow_minimal', description: 'Get minimal workflow info' },
-        { name: 'n8n_update_workflow', description: 'Update existing workflows' },
+        { name: 'n8n_update_full_workflow', description: 'Update existing workflows (full replacement)' },
+        { name: 'n8n_update_partial_workflow', description: 'Update workflows using diff operations' },
         { name: 'n8n_delete_workflow', description: 'Delete workflows' },
         { name: 'n8n_list_workflows', description: 'List workflows with filters' },
         { name: 'n8n_validate_workflow', description: 'Validate workflow from n8n instance' },
-        { name: 'n8n_autofix_workflow', description: 'Automatically fix common workflow errors' }
+        { name: 'n8n_autofix_workflow', description: 'Automatically fix common workflow errors' },
+        { name: 'n8n_activate_workflow', description: 'Activate a workflow' },
+        { name: 'n8n_deactivate_workflow', description: 'Deactivate a workflow' },
+        { name: 'n8n_duplicate_workflow', description: 'Duplicate an existing workflow' }
       ]
     },
     {
@@ -1849,14 +1866,43 @@ export async function handleListAvailableTools(context?: InstanceContext): Promi
         { name: 'n8n_trigger_webhook_workflow', description: 'Trigger workflows via webhook' },
         { name: 'n8n_get_execution', description: 'Get execution details' },
         { name: 'n8n_list_executions', description: 'List executions with filters' },
-        { name: 'n8n_delete_execution', description: 'Delete execution records' }
+        { name: 'n8n_delete_execution', description: 'Delete execution records' },
+        { name: 'n8n_retry_execution', description: 'Retry a failed execution' },
+        { name: 'n8n_cancel_execution', description: 'Cancel a running execution' },
+        { name: 'n8n_stop_execution', description: 'Stop all running executions for a workflow' },
+        { name: 'n8n_get_execution_data', description: 'Get detailed input/output data for an execution' },
+        { name: 'n8n_get_execution_logs', description: 'Get execution logs and error details' }
+      ]
+    },
+    {
+      category: 'Webhook Management',
+      tools: [
+        { name: 'n8n_create_webhook', description: 'Create a webhook endpoint for a workflow' },
+        { name: 'n8n_delete_webhook', description: 'Delete a webhook endpoint' },
+        { name: 'n8n_list_webhooks', description: 'List all webhooks for a workflow' },
+        { name: 'n8n_test_webhook', description: 'Test a webhook with sample data' },
+        { name: 'n8n_get_webhook_logs', description: 'Get webhook call logs and history' }
+      ]
+    },
+    {
+      category: 'Template Management',
+      tools: [
+        { name: 'n8n_apply_template', description: 'Apply a template to create or update a workflow' },
+        { name: 'n8n_create_template', description: 'Create a reusable template from an existing workflow' }
+      ]
+    },
+    {
+      category: 'Analysis & Utilities',
+      tools: [
+        { name: 'n8n_analyze_dependencies', description: 'Analyze workflow dependencies and data flow paths' }
       ]
     },
     {
       category: 'System',
       tools: [
         { name: 'n8n_health_check', description: 'Check API connectivity' },
-        { name: 'n8n_list_available_tools', description: 'List all available tools' }
+        { name: 'n8n_list_available_tools', description: 'List all available tools' },
+        { name: 'n8n_diagnostic', description: 'Run diagnostic checks on n8n API configuration' }
       ]
     }
   ];

@@ -402,4 +402,87 @@ export class N8nApiClient {
       throw handleN8nApiError(error);
     }
   }
+
+  // Execute a workflow manually
+  async executeWorkflow(id: string, data?: any): Promise<Execution> {
+    try {
+      const response = await this.client.post(`/workflows/${id}/execute`, data);
+      return response.data.data || response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  // Stop a running execution
+  async stopExecution(id: string): Promise<void> {
+    try {
+      await this.client.post(`/executions/${id}/stop`);
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  // Retry a failed execution
+  async retryExecution(id: string): Promise<Execution> {
+    try {
+      const response = await this.client.post(`/executions/${id}/retry`);
+      return response.data.data || response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  // Cancel a running execution
+  async cancelExecution(id: string): Promise<void> {
+    try {
+      await this.client.post(`/executions/${id}/cancel`);
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  // Activate a workflow
+  async activateWorkflow(id: string): Promise<Workflow> {
+    try {
+      const response = await this.client.patch(`/workflows/${id}`, { active: true });
+      return response.data.data || response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  // Deactivate a workflow
+  async deactivateWorkflow(id: string): Promise<Workflow> {
+    try {
+      const response = await this.client.patch(`/workflows/${id}`, { active: false });
+      return response.data.data || response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  // Duplicate a workflow
+  async duplicateWorkflow(id: string, name?: string): Promise<Workflow> {
+    try {
+      const workflow = await this.getWorkflow(id);
+
+      // Create a new workflow with essential fields including settings
+      const newWorkflow: Partial<Workflow> = {
+        name: name || `${workflow.name} (Copy)`,
+        nodes: workflow.nodes,
+        connections: workflow.connections,
+        settings: workflow.settings  // Include settings from source workflow
+      };
+
+      // cleanWorkflowForCreate will handle cleanup and add defaults if needed
+      return await this.createWorkflow(newWorkflow);
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  // Get the base API URL (for webhook URLs)
+  get apiUrl(): string {
+    return this.client.defaults.baseURL || '';
+  }
 }

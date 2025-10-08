@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from .env file
+// Use explicit path to ensure it works regardless of where the server is run from
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
 import { N8NDocumentationMCPServer } from './server';
 import { logger } from '../utils/logger';
 import { TelemetryConfigManager } from '../telemetry/config-manager';

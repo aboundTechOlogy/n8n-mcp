@@ -71,22 +71,51 @@ export function validateWorkflowSettings(settings: unknown): z.infer<typeof work
 
 // Clean workflow data for API operations
 export function cleanWorkflowForCreate(workflow: Partial<Workflow>): Partial<Workflow> {
-  const {
-    // Remove read-only fields
-    id,
-    createdAt,
-    updatedAt,
-    versionId,
-    meta,
-    // Remove fields that cause API errors during creation
-    active,
-    tags,
-    // Keep everything else
-    ...cleanedWorkflow
-  } = workflow;
+  // Only keep the essential fields that n8n accepts
+  // Build a clean object from scratch instead of using destructuring
+  const cleanedWorkflow: any = {
+    name: workflow.name
+  };
 
-  // Ensure settings are present with defaults
-  if (!cleanedWorkflow.settings) {
+  // Add nodes if present
+  if (workflow.nodes && Array.isArray(workflow.nodes)) {
+    cleanedWorkflow.nodes = workflow.nodes.map((node: any) => {
+      // Only keep essential node fields
+      const cleanNode: any = {
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        typeVersion: node.typeVersion,
+        position: node.position,
+        parameters: node.parameters
+      };
+
+      // Add optional fields only if they exist and are not default
+      if (node.credentials) cleanNode.credentials = node.credentials;
+      if (node.disabled === true) cleanNode.disabled = true;
+      if (node.notes) cleanNode.notes = node.notes;
+      if (node.notesInFlow === true) cleanNode.notesInFlow = true;
+      if (node.continueOnFail === true) cleanNode.continueOnFail = true;
+      if (node.retryOnFail === true) cleanNode.retryOnFail = true;
+      if (node.maxTries) cleanNode.maxTries = node.maxTries;
+      if (node.waitBetweenTries) cleanNode.waitBetweenTries = node.waitBetweenTries;
+      if (node.alwaysOutputData === true) cleanNode.alwaysOutputData = true;
+      if (node.executeOnce === true) cleanNode.executeOnce = true;
+
+      return cleanNode;
+    });
+  }
+
+  // Add connections if present
+  if (workflow.connections) {
+    cleanedWorkflow.connections = workflow.connections;
+  }
+
+  // Add settings if present, otherwise use defaults
+  // REQUIRED by n8n API for workflow creation
+  if (workflow.settings) {
+    cleanedWorkflow.settings = workflow.settings;
+  } else {
     cleanedWorkflow.settings = defaultWorkflowSettings;
   }
 
@@ -95,14 +124,16 @@ export function cleanWorkflowForCreate(workflow: Partial<Workflow>): Partial<Wor
 
 /**
  * Clean workflow data for update operations.
- * 
+ *
  * This function removes read-only and computed fields that should not be sent
  * in API update requests. It does NOT add any default values or new fields.
- * 
+ *
  * Note: Unlike cleanWorkflowForCreate, this function does not add default settings.
  * The n8n API will reject update requests that include properties not present in
  * the original workflow ("settings must NOT have additional properties" error).
- * 
+ *
+ * IMPORTANT: The n8n API requires 'name' to always be present in update requests.
+ *
  * @param workflow - The workflow object to clean
  * @returns A cleaned partial workflow suitable for API updates
  */
@@ -128,6 +159,11 @@ export function cleanWorkflowForUpdate(workflow: Workflow): Partial<Workflow> {
     // Keep everything else
     ...cleanedWorkflow
   } = workflow as any;
+
+  // Ensure 'name' is always present (required by n8n API)
+  if (!cleanedWorkflow.name) {
+    throw new Error('Workflow name is required for updates');
+  }
 
   return cleanedWorkflow;
 }

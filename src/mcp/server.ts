@@ -72,30 +72,36 @@ export class N8NDocumentationMCPServer {
     // Check for test environment first
     const envDbPath = process.env.NODE_DB_PATH;
     let dbPath: string | null = null;
-    
+
     let possiblePaths: string[] = [];
-    
+
     if (envDbPath && (envDbPath === ':memory:' || existsSync(envDbPath))) {
       dbPath = envDbPath;
     } else {
       // Try multiple database paths
+      // CRITICAL: __dirname is most reliable for cross-platform (WSL/Windows)
+      // because it's relative to the compiled .js file location
       possiblePaths = [
-        path.join(process.cwd(), 'data', 'nodes.db'),
-        path.join(__dirname, '../../data', 'nodes.db'),
-        './data/nodes.db'
+        path.join(__dirname, '../../data', 'nodes.db'),  // Most reliable - moved to first
+        path.join(process.cwd(), 'data', 'nodes.db'),   // Works if cwd is project root
+        './data/nodes.db',                               // Relative fallback
+        '/home/dreww/n8n-mcp/data/nodes.db'             // WSL absolute path fallback
       ];
-      
+
       for (const p of possiblePaths) {
         if (existsSync(p)) {
           dbPath = p;
+          logger.debug(`Found database at: ${p}`);
           break;
         }
       }
     }
-    
+
     if (!dbPath) {
       logger.error('Database not found in any of the expected locations:', possiblePaths);
-      throw new Error('Database nodes.db not found. Please run npm run rebuild first.');
+      logger.error('Current working directory:', process.cwd());
+      logger.error('__dirname:', __dirname);
+      throw new Error('Database nodes.db not found. Please run npm run rebuild first. If running from Windows/Claude Desktop, ensure NODE_DB_PATH is set or database exists at one of the checked paths.');
     }
     
     // Initialize database asynchronously
@@ -1061,7 +1067,39 @@ export class N8NDocumentationMCPServer {
   private async getNodeInfo(nodeType: string): Promise<any> {
     await this.ensureInitialized();
     if (!this.repository) throw new Error('Repository not initialized');
-    
+
+    // Enhanced validation with helpful error messages
+    if (!nodeType) {
+      return {
+        error: 'Missing required parameter: nodeType',
+        message: 'nodeType must be provided as a string with prefix (e.g., "nodes-base.slack")',
+        example: 'get_node_info({nodeType: "nodes-base.httpRequest"})',
+        severity: 'error'
+      };
+    }
+
+    if (typeof nodeType !== 'string') {
+      return {
+        error: 'Invalid parameter type',
+        message: 'nodeType must be a string',
+        received: typeof nodeType,
+        example: 'get_node_info({nodeType: "nodes-base.slack"})',
+        severity: 'error'
+      };
+    }
+
+    // Validate nodeType format (must include prefix)
+    if (!nodeType.includes('.')) {
+      return {
+        error: 'Invalid nodeType format',
+        message: 'nodeType must include prefix (e.g., "nodes-base.slack", not "slack")',
+        received: nodeType,
+        correctFormat: `nodes-base.${nodeType}`,
+        example: 'get_node_info({nodeType: "nodes-base.slack"})',
+        severity: 'error'
+      };
+    }
+
     // First try with normalized type
     const normalizedType = normalizeNodeType(nodeType);
     let node = this.repository.getNode(normalizedType);
@@ -1668,16 +1706,9 @@ export class N8NDocumentationMCPServer {
     await this.ensureInitialized();
     if (!this.repository) throw new Error('Repository not initialized');
     const tools = this.repository.getAITools();
-    
-    // Debug: Check if is_ai_tool column is populated
-    const aiCount = this.db!.prepare('SELECT COUNT(*) as ai_count FROM nodes WHERE is_ai_tool = 1').get() as any;
-    // console.log('DEBUG list_ai_tools:', { 
-    //   toolsLength: tools.length, 
-    //   aiCountInDB: aiCount.ai_count,
-    //   sampleTools: tools.slice(0, 3)
-    // }); // Removed to prevent stdout interference
-    
+
     return {
+      _version: 'FIXED_2025-10-07_02:46',
       tools,
       totalCount: tools.length,
       requirements: {
@@ -1830,12 +1861,44 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
   private async getNodeEssentials(nodeType: string): Promise<any> {
     await this.ensureInitialized();
     if (!this.repository) throw new Error('Repository not initialized');
-    
+
+    // Enhanced validation with helpful error messages
+    if (!nodeType) {
+      return {
+        error: 'Missing required parameter: nodeType',
+        message: 'nodeType must be provided as a string with prefix (e.g., "nodes-base.slack")',
+        example: 'get_node_essentials({nodeType: "nodes-base.httpRequest"})',
+        severity: 'error'
+      };
+    }
+
+    if (typeof nodeType !== 'string') {
+      return {
+        error: 'Invalid parameter type',
+        message: 'nodeType must be a string',
+        received: typeof nodeType,
+        example: 'get_node_essentials({nodeType: "nodes-base.slack"})',
+        severity: 'error'
+      };
+    }
+
+    // Validate nodeType format (must include prefix)
+    if (!nodeType.includes('.')) {
+      return {
+        error: 'Invalid nodeType format',
+        message: 'nodeType must include prefix (e.g., "nodes-base.slack", not "slack")',
+        received: nodeType,
+        correctFormat: `nodes-base.${nodeType}`,
+        example: 'get_node_essentials({nodeType: "nodes-base.slack"})',
+        severity: 'error'
+      };
+    }
+
     // Check cache first
     const cacheKey = `essentials:${nodeType}`;
     const cached = this.cache.get(cacheKey);
     if (cached) return cached;
-    
+
     // Get the full node information
     // First try with normalized type
     const normalizedType = normalizeNodeType(nodeType);
@@ -2179,7 +2242,39 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
   private async getNodeAsToolInfo(nodeType: string): Promise<any> {
     await this.ensureInitialized();
     if (!this.repository) throw new Error('Repository not initialized');
-    
+
+    // Enhanced validation with helpful error messages
+    if (!nodeType) {
+      return {
+        error: 'Missing required parameter: nodeType',
+        message: 'nodeType must be provided as a string with prefix (e.g., "nodes-base.slack")',
+        example: 'get_node_as_tool_info({nodeType: "nodes-base.slack"})',
+        severity: 'error'
+      };
+    }
+
+    if (typeof nodeType !== 'string') {
+      return {
+        error: 'Invalid parameter type',
+        message: 'nodeType must be a string',
+        received: typeof nodeType,
+        example: 'get_node_as_tool_info({nodeType: "nodes-base.slack"})',
+        severity: 'error'
+      };
+    }
+
+    // Validate nodeType format (must include prefix)
+    if (!nodeType.includes('.')) {
+      return {
+        error: 'Invalid nodeType format',
+        message: 'nodeType must include prefix (e.g., "nodes-base.slack", not "slack")',
+        received: nodeType,
+        correctFormat: `nodes-base.${nodeType}`,
+        example: 'get_node_as_tool_info({nodeType: "nodes-base.slack"})',
+        severity: 'error'
+      };
+    }
+
     // Get node info
     // First try with normalized type
     const normalizedType = normalizeNodeType(nodeType);
