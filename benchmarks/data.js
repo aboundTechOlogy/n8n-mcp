@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760037791032,
+  "lastUpdate": 1760047506473,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -468,6 +468,58 @@ window.BENCHMARK_DATA = {
             "range": "0.35059999999999997",
             "unit": "ms",
             "extra": "13815 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "22622cd3df7a161aab0029687b490269340a1f33",
+          "message": "chore: remove Docker and Railway deployment files\n\nRemove all Docker and Railway-specific deployment files as this project\nis now deployed via systemd services on:\n- Local: WSL (stdio mode)\n- Remote: GCP VM (HTTP mode with systemd)\n\nRemoved files:\n- All Dockerfiles and docker-compose configurations\n- Railway deployment config\n- Docker-specific tests and workflows\n- docker/ folder with entrypoint scripts\n\nThe project now uses:\n- Local WSL: Direct Node.js execution via systemd/stdio\n- GCP VM: systemd service with Google Secrets Manager\n\nSee GCP_DEPLOYMENT_GUIDE.md for current deployment pattern.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-10-09T18:03:30-04:00",
+          "tree_id": "8720c873f26df9a04db125ac7b440e802ee99db9",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/22622cd3df7a161aab0029687b490269340a1f33"
+        },
+        "date": 1760047506081,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0192,
+            "range": "0.23879999999999998",
+            "unit": "ms",
+            "extra": "51967 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1651,
+            "range": "0.9183999999999997",
+            "unit": "ms",
+            "extra": "316 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0046,
+            "range": "0.25730000000000003",
+            "unit": "ms",
+            "extra": "216218 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0669,
+            "range": "0.4171",
+            "unit": "ms",
+            "extra": "14950 ops/sec"
           }
         ]
       }
