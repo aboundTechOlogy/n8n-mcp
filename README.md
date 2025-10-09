@@ -366,6 +366,33 @@ Deploy n8n-MCP to Railway's cloud platform with zero configuration:
 
 **Restart Claude Desktop after updating configuration** - That's it! 🎉
 
+### Option 5: Remote Server with OAuth (Production-Ready) 🔐
+
+**Prerequisites:** Remote server with HTTPS and OAuth configured
+
+If you've deployed n8n-MCP to a remote server with OAuth 2.0 authentication (like GCP, AWS, or your own VPS), you can connect using Claude Desktop's custom connector UI without editing config files:
+
+**Quick Setup:**
+1. Open Claude Desktop
+2. Go to **Settings** → **Custom Connectors** (or **Developer** settings)
+3. Add a new connector with your server URL:
+   ```
+   https://your-server.com/mcp
+   ```
+4. Select **"HTTP with OAuth"** as the transport type
+5. Claude Desktop will open your browser for OAuth authorization
+6. Authorize the connection (GitHub OAuth or custom OAuth)
+7. All 58 n8n-MCP tools will be available immediately
+
+**Benefits:**
+- 🔒 **Secure OAuth authentication** - No hardcoded tokens in config files
+- ☁️ **Production-ready** - Deploy once, connect from anywhere
+- 🌐 **Team access** - Multiple users can connect to the same server
+- 🔄 **Persistent tokens** - Tokens survive server restarts
+- 🎯 **Simple setup** - Just paste the URL, no config file editing
+
+> 📚 **For detailed deployment instructions with OAuth, see our [GCP Deployment Guide](./GCP_DEPLOYMENT_GUIDE.md)**
+
 ## 🔧 n8n Integration
 
 Want to use n8n-MCP with your n8n instance? Check out our comprehensive [n8n Deployment Guide](./docs/N8N_DEPLOYMENT.md) for:
