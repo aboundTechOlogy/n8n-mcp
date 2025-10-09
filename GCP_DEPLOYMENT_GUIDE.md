@@ -31,19 +31,27 @@ This deployment will:
 
 ### Step 1: System Preparation
 
+**Current VM State (Verified):**
+- ✅ VM: abound-infra-vm (e2-standard-2)
+- ✅ External IP: 35.185.61.108
+- ✅ n8n: Running in Docker on port 5678, data in `/var/lib/n8n`
+- ✅ gcloud: Version 531.0.0 installed
+- ✅ Google Secrets Manager: Available (24 existing secrets)
+- ⚠️ Node.js: v18.20.4 (needs upgrade to v20)
+
 ```bash
 # Connect to your GCP VM
-gcloud compute ssh your-vm-name --zone=your-zone
+gcloud compute ssh abound-infra-vm --zone=us-east1-c --project=abound-infr
 
 # Update system packages
 sudo apt update && sudo apt upgrade -y
 
-# Install Node.js 20.x LTS
+# Upgrade Node.js from v18 to v20 LTS
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
-# Install additional tools
-sudo apt-get install -y git curl nginx certbot python3-certbot-nginx
+# Install additional tools (git and curl already present)
+sudo apt-get install -y nginx certbot python3-certbot-nginx
 
 # Verify installations
 node --version   # Should show v20.x.x
@@ -70,96 +78,144 @@ sudo npm run build
 ls -lh data/nodes.db  # Should show ~49MB file
 ```
 
-### Step 3: Generate Secure Authentication Token
+### Step 3: Configure Google Secrets Manager (Recommended for GCP)
+
+**🔐 BEST PRACTICE**: Use Google Secrets Manager instead of storing credentials in files.
 
 ```bash
-# Generate a secure 32-character token
-openssl rand -base64 32
+# Enable Secret Manager API (if not already enabled)
+gcloud services enable secretmanager.googleapis.com
 
-# SAVE THIS TOKEN - You'll need it for:
-# 1. Server configuration (.env file)
-# 2. Claude Desktop connector setup
-# 3. Cursor/Claude Code configuration
+# Generate and store AUTH_TOKEN
+echo -n "$(openssl rand -base64 32)" | \
+  gcloud secrets create n8n-mcp-auth-token \
+  --data-file=- \
+  --replication-policy="automatic" \
+  --project=abound-infr
+
+# Store N8N_API_KEY (get from n8n Settings > API first)
+# Open http://35.185.61.108:5678 → Settings → API → Create API Key
+echo -n "YOUR_N8N_API_KEY_HERE" | \
+  gcloud secrets create n8n-mcp-n8n-api-key \
+  --data-file=- \
+  --replication-policy="automatic" \
+  --project=abound-infr
+
+# Get your VM's service account
+VM_SERVICE_ACCOUNT=$(gcloud compute instances describe abound-infra-vm \
+  --zone=us-east1-c \
+  --project=abound-infr \
+  --format='get(serviceAccounts[0].email)')
+
+echo "VM Service Account: $VM_SERVICE_ACCOUNT"
+
+# Grant VM access to secrets
+gcloud secrets add-iam-policy-binding n8n-mcp-auth-token \
+  --member="serviceAccount:$VM_SERVICE_ACCOUNT" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project=abound-infr
+
+gcloud secrets add-iam-policy-binding n8n-mcp-n8n-api-key \
+  --member="serviceAccount:$VM_SERVICE_ACCOUNT" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project=abound-infr
+
+# Verify access (run this ON THE VM)
+gcloud secrets versions access latest --secret="n8n-mcp-auth-token"
 ```
 
-**⚠️ CRITICAL**: Save this token in your password manager. You'll configure it:
-- **Server-side**: In the `.env` file on the VM
-- **Client-side**: In Claude Desktop/Cursor UI (NOT in config files)
+**Save the AUTH_TOKEN for client configuration:**
+```bash
+# Copy this token - you'll paste it in Claude Desktop/ChatGPT/Cursor
+gcloud secrets versions access latest --secret="n8n-mcp-auth-token"
+```
 
-### Step 4: Server Configuration
+### Step 4: Configure Environment with Secrets Manager
+
+Create a startup script that fetches secrets and configures the service:
 
 ```bash
-# Create environment configuration
+# Create secrets loader script
+sudo nano /opt/n8n-mcp/load-secrets.sh
+```
+
+**Paste this script:**
+
+```bash
+#!/bin/bash
+# Google Secrets Manager loader for n8n-MCP
+set -e
+
+PROJECT_ID="abound-infr"
+
+echo "Loading secrets from Google Secret Manager..."
+
+# Fetch secrets
+export AUTH_TOKEN=$(gcloud secrets versions access latest --secret="n8n-mcp-auth-token" --project="$PROJECT_ID")
+export N8N_API_KEY=$(gcloud secrets versions access latest --secret="n8n-mcp-n8n-api-key" --project="$PROJECT_ID")
+
+# Core configuration
+export MCP_MODE=http
+export USE_FIXED_HTTP=true
+export NODE_ENV=production
+export PORT=3000
+export HOST=0.0.0.0
+
+# Database
+export NODE_DB_PATH=/opt/n8n-mcp/data/nodes.db
+
+# Logging
+export LOG_LEVEL=info
+
+# n8n API
+export N8N_API_URL=http://localhost:5678
+export N8N_API_TIMEOUT=30000
+export N8N_API_MAX_RETRIES=3
+
+# Reverse Proxy
+export BASE_URL=https://n8n-mcp.your-domain.com
+export TRUST_PROXY=1
+
+echo "Secrets loaded successfully"
+
+# Start the application
+exec /usr/bin/node /opt/n8n-mcp/dist/mcp/index.js
+```
+
+**Make the script executable:**
+```bash
+sudo chmod +x /opt/n8n-mcp/load-secrets.sh
+```
+
+**Alternative: Environment File (Less Secure)**
+
+If you prefer not to use Secrets Manager, create a `.env` file:
+
+```bash
 sudo nano /opt/n8n-mcp/.env
 ```
 
-**Paste this configuration** (replace placeholder values):
-
 ```bash
-# ==================
-# CORE CONFIGURATION
-# ==================
-
-# Server Mode
 MCP_MODE=http
 USE_FIXED_HTTP=true
 NODE_ENV=production
-
-# Network Settings
 PORT=3000
 HOST=0.0.0.0
-
-# Database
 NODE_DB_PATH=/opt/n8n-mcp/data/nodes.db
-
-# Logging
 LOG_LEVEL=info
 
-# ==================
-# AUTHENTICATION
-# ==================
+# Get these from:
+# AUTH_TOKEN: openssl rand -base64 32
+# N8N_API_KEY: n8n Settings > API > Create API Key
+AUTH_TOKEN=<PASTE_TOKEN_HERE>
+N8N_API_KEY=<PASTE_API_KEY_HERE>
 
-# Bearer token for HTTP authentication
-# PASTE YOUR TOKEN FROM STEP 3 HERE
-AUTH_TOKEN=<PASTE_YOUR_GENERATED_TOKEN_HERE>
-
-# ==================
-# N8N API INTEGRATION
-# ==================
-
-# Your n8n instance (use localhost since on same VM)
 N8N_API_URL=http://localhost:5678
-
-# Your n8n API key (get from n8n Settings > API)
-N8N_API_KEY=<YOUR_N8N_API_KEY>
-
-# API Timeout (optional)
 N8N_API_TIMEOUT=30000
 N8N_API_MAX_RETRIES=3
-
-# ==================
-# REVERSE PROXY
-# ==================
-
-# Your public domain
 BASE_URL=https://n8n-mcp.your-domain.com
-
-# Trust proxy for correct IP logging
 TRUST_PROXY=1
-
-# CORS (optional - restrict for production)
-# CORS_ORIGIN=https://claude.ai
 ```
-
-**Get your n8n API Key:**
-```bash
-# 1. Open your n8n instance in browser
-# 2. Go to Settings > API
-# 3. Click "Create API Key"
-# 4. Copy the key and paste it in .env above
-```
-
-**Save and exit**: `Ctrl+X`, then `Y`, then `Enter`
 
 ### Step 5: Create System User and Set Permissions
 
@@ -183,6 +239,57 @@ sudo nano /etc/systemd/system/n8n-mcp.service
 
 **Paste this configuration:**
 
+**Option A: With Google Secrets Manager (Recommended)**
+
+```ini
+[Unit]
+Description=n8n-MCP HTTP Server
+Documentation=https://github.com/czlonkowski/n8n-mcp
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User=n8n-mcp
+Group=n8n-mcp
+WorkingDirectory=/opt/n8n-mcp
+
+# Use secrets loader script
+ExecStart=/opt/n8n-mcp/load-secrets.sh
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitInterval=60s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/n8n-mcp/data
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+# Resource limits
+MemoryLimit=512M
+CPUQuota=50%
+LimitNOFILE=65536
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=n8n-mcp
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Option B: With .env File (Alternative)**
+
 ```ini
 [Unit]
 Description=n8n-MCP HTTP Server
@@ -198,8 +305,6 @@ WorkingDirectory=/opt/n8n-mcp
 
 # Load environment from file
 EnvironmentFile=/opt/n8n-mcp/.env
-
-# Start command
 ExecStart=/usr/bin/node /opt/n8n-mcp/dist/mcp/index.js
 
 # Restart policy
@@ -254,6 +359,8 @@ sudo journalctl -u n8n-mcp -f
 
 You should see:
 ```
+Loading secrets from Google Secret Manager...
+Secrets loaded successfully
 [INFO] Starting n8n-MCP HTTP Server v2.14.1...
 [INFO] Server running at http://0.0.0.0:3000
 [INFO] Endpoints:
@@ -488,7 +595,34 @@ sudo systemctl show n8n-mcp --property=MemoryCurrent
 
 ### Token Rotation
 
-When rotating tokens:
+**Option A: With Google Secrets Manager (Recommended)**
+
+```bash
+# 1. Generate new token
+NEW_TOKEN=$(openssl rand -base64 32)
+echo "New token: $NEW_TOKEN"
+
+# 2. Update secret in Google Secrets Manager
+echo -n "$NEW_TOKEN" | \
+  gcloud secrets versions add n8n-mcp-auth-token \
+  --data-file=- \
+  --project=abound-infr
+
+# 3. Restart service (will fetch new token on startup)
+sudo systemctl restart n8n-mcp
+
+# 4. Verify new token works
+curl -H "Authorization: Bearer $NEW_TOKEN" \
+     https://n8n-mcp.your-domain.com/health
+
+# 5. Update all client configurations
+# - Claude Desktop: Settings > Connectors > Edit
+# - ChatGPT: Settings > Connectors > Edit
+# - Cursor: MCP Servers settings
+# - Claude Code: Extension settings
+```
+
+**Option B: With .env File (Alternative)**
 
 ```bash
 # 1. Generate new token
@@ -504,6 +638,7 @@ sudo systemctl restart n8n-mcp
 
 # 4. Update all client configurations
 # - Claude Desktop: Settings > Connectors > Edit
+# - ChatGPT: Settings > Connectors > Edit
 # - Cursor: MCP Servers settings
 # - Claude Code: Extension settings
 ```
@@ -568,17 +703,42 @@ sudo systemctl status n8n-mcp
 sudo journalctl -u n8n-mcp -n 50
 
 # Common issues:
-# - Missing AUTH_TOKEN in .env
+# - Secrets Manager: VM lacks permission to access secrets
+# - .env file: Missing AUTH_TOKEN in .env
 # - Port 3000 already in use
 # - Database file missing
 # - Incorrect permissions
 
+# For Secrets Manager issues:
+# Test secret access manually
+gcloud secrets versions access latest --secret="n8n-mcp-auth-token" --project="abound-infr"
+
+# For .env file issues:
 # Fix permissions
 sudo chown -R n8n-mcp:n8n-mcp /opt/n8n-mcp
 sudo chmod 600 /opt/n8n-mcp/.env
 ```
 
 ### Authentication Failures
+
+**With Google Secrets Manager:**
+
+```bash
+# Test secret access
+gcloud secrets versions access latest --secret="n8n-mcp-auth-token" --project="abound-infr"
+
+# If access denied, check IAM permissions
+gcloud secrets get-iam-policy n8n-mcp-auth-token --project="abound-infr"
+
+# Test with correct token
+TOKEN=$(gcloud secrets versions access latest --secret="n8n-mcp-auth-token" --project="abound-infr")
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/health
+
+# Check logs for auth failures
+sudo journalctl -u n8n-mcp | grep "Authentication failed"
+```
+
+**With .env File:**
 
 ```bash
 # Check token in .env
@@ -609,6 +769,22 @@ sudo journalctl -u n8n-mcp | grep "Authentication failed"
 4. **Restart Claude Desktop** after changing connector settings
 
 ### n8n API Not Working
+
+**With Google Secrets Manager:**
+
+```bash
+# Get API key from secrets
+N8N_KEY=$(gcloud secrets versions access latest --secret="n8n-mcp-n8n-api-key" --project="abound-infr")
+
+# Test n8n API connection
+curl http://localhost:5678/api/v1/workflows \
+  -H "X-N8N-API-KEY: $N8N_KEY"
+
+# Check logs for n8n API errors
+sudo journalctl -u n8n-mcp | grep "n8n API"
+```
+
+**With .env File:**
 
 ```bash
 # Test n8n API connection
