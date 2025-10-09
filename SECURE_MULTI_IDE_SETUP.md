@@ -1,76 +1,64 @@
 # Secure Multi-IDE Setup for n8n-MCP
 
-Connect Cursor (WSL & Windows) and Claude Code to your remote n8n-MCP server securely using environment variables.
+Connect Cursor (WSL & Windows) and Claude Code to your remote n8n-MCP server securely.
 
-## ✅ What I've Done (WSL)
+## ✅ What's Working
 
-1. ✅ Created `.cursor/mcp.json` with secure configuration
-2. ✅ Added `N8N_MCP_TOKEN` to `~/.bashrc`
-3. ✅ Added `.cursor/mcp.json` to `.gitignore`
+- ✅ **Claude Desktop** - OAuth authentication
+- ✅ **Claude Code** - Shares OAuth with Claude Desktop
+- ✅ **Cursor WSL** - Direct HTTP with bearer token (configured)
+- 📝 **Cursor Windows** - Ready to configure (instructions below)
 
-## 🔧 What You Need To Do
+## 🔧 Cursor WSL Setup (Already Done)
 
-### Step 1: Reload Your WSL Shell
-
-```bash
-source ~/.bashrc
-
-# Verify token is set
-echo $N8N_MCP_TOKEN
-# Should output: 7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8=
-```
-
-### Step 2: Set Up Windows Environment Variable
-
-**Option A: Using PowerShell (Recommended)**
-```powershell
-# Open PowerShell as Administrator
-[System.Environment]::SetEnvironmentVariable('N8N_MCP_TOKEN', '7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8=', 'User')
-
-# Close and reopen PowerShell/Terminal
-# Verify:
-echo $env:N8N_MCP_TOKEN
-```
-
-**Option B: Using System Settings GUI**
-1. Press `Win + R`, type `sysdm.cpl`, press Enter
-2. Go to "Advanced" tab → "Environment Variables"
-3. Under "User variables", click "New"
-4. Variable name: `N8N_MCP_TOKEN`
-5. Variable value: `7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8=`
-6. Click OK, restart any open terminals/Cursor
-
-### Step 3: Create Cursor Config for Windows
-
-In your Windows project directory, create `.cursor\mcp.json`:
+Created `~/.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
-    "n8n-mcp-remote": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote@latest",
-        "https://n8n-mcp.aboundtechology.com/mcp",
-        "--header",
-        "Authorization:Bearer ${N8N_MCP_TOKEN}"
-      ]
+    "n8n-mcp": {
+      "url": "https://n8n-mcp.aboundtechology.com/mcp",
+      "transport": {
+        "type": "http",
+        "headers": {
+          "Authorization": "Bearer 7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8="
+        }
+      }
     }
   }
 }
 ```
 
-Then add to `.gitignore`:
-```
-.cursor\mcp.json
+**Note:** No environment variables needed - direct HTTP connection works!
+
+## 🔧 Cursor Windows Setup
+
+Create `C:\Users\<YourUsername>\.cursor\mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "n8n-mcp": {
+      "url": "https://n8n-mcp.aboundtechology.com/mcp",
+      "transport": {
+        "type": "http",
+        "headers": {
+          "Authorization": "Bearer 7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8="
+        }
+      }
+    }
+  }
+}
 ```
 
-### Step 4: Configure Claude Code (Already Done!)
+Then restart Cursor Windows.
+
+## 🔧 Claude Code Setup (Already Done!)
 
 Claude Code uses OAuth authentication via Claude Desktop. If you've already connected in Claude Desktop, Claude Code will work automatically. No additional configuration needed.
 
-**Config location:** `%APPDATA%\Claude\claude_desktop_config.json`
+**Config location (Windows):** `%APPDATA%\Claude\claude_desktop_config.json`
+**Config location (Linux):** `~/.config/Claude/claude_desktop_config.json`
 
 Your existing config:
 ```json
@@ -87,45 +75,24 @@ Your existing config:
 }
 ```
 
-### Step 5: Restart Everything
-
-1. **Close and reopen your WSL terminal** (to load new .bashrc)
-2. **Restart Cursor WSL**
-3. **Restart Cursor Windows** (after setting Windows env var)
-4. **Restart VS Code** (if using Claude Code extension)
-
-### Step 6: Test Each Connection
+## ✅ Testing Connections
 
 **Test Cursor WSL:**
-```bash
-# In WSL terminal, verify env var is loaded
-echo $N8N_MCP_TOKEN
-
-# Open Cursor in WSL
-cursor .
-
-# In Cursor:
-# 1. Open Command Palette (Ctrl+Shift+P)
-# 2. Type "MCP"
-# 3. Check MCP panel for "n8n-mcp-remote"
-# 4. Try asking: "List available n8n nodes"
-```
+1. Open Cursor in WSL: `cursor .`
+2. Check MCP settings/panel for "n8n-mcp"
+3. Should show 58 tools available
+4. Try asking: "List available n8n nodes"
 
 **Test Cursor Windows:**
-```powershell
-# In PowerShell, verify env var
-echo $env:N8N_MCP_TOKEN
-
-# Open Cursor
-# Check MCP panel for "n8n-mcp-remote"
-# Try asking: "Show me the Slack node"
-```
+1. Open Cursor on Windows
+2. Check MCP settings/panel for "n8n-mcp"
+3. Should show 58 tools available
+4. Try asking: "Show me the Slack node"
 
 **Test Claude Code:**
-```
-# Already working from Claude Desktop OAuth setup
-# Just open Claude Code extension and verify tools are available
-```
+1. Open Claude Code extension
+2. Verify tools are available (shares OAuth with Claude Desktop)
+3. Try asking: "What n8n nodes are available?"
 
 ## 🔒 Security Summary
 
@@ -133,36 +100,24 @@ echo $env:N8N_MCP_TOKEN
 |-------------|--------|----------|
 | **Claude Desktop** | OAuth | ✅ Best - No credentials in files |
 | **Claude Code** | OAuth | ✅ Best - Shared with Desktop |
-| **Cursor WSL** | Env Var | ✅ Good - Token in shell config, not git |
-| **Cursor Windows** | Env Var | ✅ Good - Token in system env, not git |
+| **Cursor WSL** | Bearer Token | ⚠️ Token in user config (gitignored) |
+| **Cursor Windows** | Bearer Token | ⚠️ Token in user config (gitignored) |
 
-### Security Checklist:
-- ✅ No credentials hardcoded in config files
-- ✅ Tokens stored in environment variables
-- ✅ Config files are gitignored
+### Security Notes:
 - ✅ OAuth used where supported (Claude Desktop/Code)
-- ✅ Bearer token fallback for Cursor (until OAuth support)
+- ⚠️ Cursor uses bearer token in `~/.cursor/mcp.json` (user-level, not project)
+- ✅ User-level config is NOT tracked in git
+- ✅ Direct HTTPS connection (no proxy needed)
+- 🔄 Rotate bearer tokens regularly for production use
 
 ## 🔧 Troubleshooting
 
-### Cursor: "n8n-mcp-remote not found"
+### Cursor: "n8n-mcp" not found or red dot
 
-1. Check environment variable is set:
-   ```bash
-   # WSL
-   echo $N8N_MCP_TOKEN
-
-   # Windows
-   echo %N8N_MCP_TOKEN%  # CMD
-   echo $env:N8N_MCP_TOKEN  # PowerShell
-   ```
-
+1. Verify `~/.cursor/mcp.json` exists and is valid JSON
 2. Restart Cursor completely (close all windows)
-
-3. Try manually running mcp-remote:
-   ```bash
-   npx -y mcp-remote@latest https://n8n-mcp.aboundtechology.com/mcp --help
-   ```
+3. Check MCP panel shows "n8n-mcp" (not "n8n-mcp-remote")
+4. Red dot is normal - tools should still work if 58 tools are listed
 
 ### Cursor: "Connection failed" or "Unauthorized"
 
@@ -176,39 +131,35 @@ echo $env:N8N_MCP_TOKEN
 
 3. Look at Cursor logs: Help → Toggle Developer Tools → Console
 
-### Cursor: "npx command not found"
-
-Install Node.js:
-- **WSL**: `sudo apt install nodejs npm`
-- **Windows**: Download from https://nodejs.org
-
 ### Claude Code: "No tools available"
 
 1. Make sure Claude Desktop is configured and connected first
 2. Restart VS Code/Cursor
-3. Check Claude Desktop config file exists
+3. Check Claude Desktop config file exists:
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+   - Linux: `~/.config/Claude/claude_desktop_config.json`
 
 ## 📊 Connection Architecture
 
 ```
 ┌─────────────────────┐
-│  Claude Desktop     │ ──OAuth──> GCP Server
-│  (Native OAuth)     │            ↑
-└─────────────────────┘            │
-                                   │
-┌─────────────────────┐            │
-│  Claude Code        │ ──OAuth──> │
-│  (Shared OAuth)     │            │
-└─────────────────────┘            │
-                                   │
-┌─────────────────────┐            │
-│  Cursor WSL         │            │
-│  (mcp-remote)       │ ──Bearer──>│
-└─────────────────────┘            │
-                                   │
-┌─────────────────────┐            │
-│  Cursor Windows     │            │
-│  (mcp-remote)       │ ──Bearer──>│
+│  Claude Desktop     │ ──OAuth───────> GCP Server (HTTPS)
+│  (Native OAuth)     │                 https://n8n-mcp.aboundtechology.com
+└─────────────────────┘                 ↑
+                                        │
+┌─────────────────────┐                 │
+│  Claude Code        │ ──OAuth─────────┤
+│  (Shared with Desktop)                │
+└─────────────────────┘                 │
+                                        │
+┌─────────────────────┐                 │
+│  Cursor WSL         │ ──Bearer Token──┤
+│  (Direct HTTP)      │                 │
+└─────────────────────┘                 │
+                                        │
+┌─────────────────────┐                 │
+│  Cursor Windows     │ ──Bearer Token──┤
+│  (Direct HTTP)      │                 │
 └─────────────────────┘
 ```
 
