@@ -1,28 +1,15 @@
 #!/usr/bin/env node
 /**
- * MCP Bridge for Claude Code (Windows)
- *
- * Bridges Claude Code extension to n8n-MCP GCP server.
- * Claude Code only supports stdio/SSE MCP servers, not HTTP with bearer tokens,
- * so this bridge converts stdio requests to HTTPS requests with authentication.
- *
- * Installation:
- *   1. Copy this file to C:\Users\<YourUsername>\n8n-mcp-bridge.js
- *   2. Run: claude mcp add n8n-mcp-gcp node C:\Users\<YourUsername>\n8n-mcp-bridge.js
- *   3. Restart Cursor Windows or start new Claude Code chat session
- *
- * Configuration:
- *   - Update REMOTE_SERVER to your n8n-MCP server URL
- *   - Update AUTH_TOKEN to your server's bearer token
+ * MCP Bridge for Claude Code - Connects stdio to remote HTTP server
+ * Bridges Claude Code extension to n8n-MCP GCP server
  */
 
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-// Configuration - Update these values for your deployment
 const REMOTE_SERVER = 'https://n8n-mcp.aboundtechology.com/mcp';
-const AUTH_TOKEN = 'YOUR_AUTH_TOKEN_HERE';
+const AUTH_TOKEN = '7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8=';
 const LOG_FILE = path.join(require('os').homedir(), 'n8n-mcp-bridge.log');
 
 function log(message) {
@@ -31,6 +18,7 @@ function log(message) {
 }
 
 let buffer = '';
+let sessionId = null; // Track session ID from server
 
 log('Bridge started');
 
@@ -78,7 +66,20 @@ async function forwardToRemote(request) {
       }
     };
 
+    // Add session ID if we have one
+    if (sessionId) {
+      options.headers['Mcp-Session-Id'] = sessionId;
+      log(`Using session ID: ${sessionId.substring(0, 8)}...`);
+    }
+
     const req = https.request(options, (res) => {
+      // Capture session ID from response headers
+      const newSessionId = res.headers['mcp-session-id'];
+      if (newSessionId && newSessionId !== sessionId) {
+        sessionId = newSessionId;
+        log(`Received new session ID: ${sessionId.substring(0, 8)}...`);
+      }
+
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
