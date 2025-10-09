@@ -93,7 +93,32 @@ sudo npm run build
 ls -lh data/nodes.db  # Should show ~49MB file
 ```
 
-### Step 3: Configure Google Secrets Manager (Recommended for GCP)
+### Step 3: Create GitHub OAuth App (for Claude Desktop)
+
+**Why GitHub OAuth?** Claude Desktop Custom Connectors require OAuth 2.0 authentication. Using GitHub OAuth provides:
+- ✅ Real user authentication (GitHub verifies identity)
+- ✅ Trusted OAuth flow
+- ✅ Users already have GitHub accounts
+- ✅ More secure than built-in OAuth
+
+**Steps:**
+
+1. Go to https://github.com/settings/developers
+2. Click **"New OAuth App"**
+3. Fill in:
+   - **Application name:** `n8n-MCP Server`
+   - **Homepage URL:** `https://n8n-mcp.aboundtechology.com`
+   - **Authorization callback URL:** `https://n8n-mcp.aboundtechology.com/oauth/callback`
+4. Click **"Register application"**
+5. **Copy the Client ID** (you'll need this for secrets)
+6. Click **"Generate a new client secret"**
+7. **Copy the Client Secret** (shown only once!)
+
+**Save these for the next step:**
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+
+### Step 4: Configure Google Secrets Manager
 
 **🔐 BEST PRACTICE**: Use Google Secrets Manager instead of storing credentials in files.
 
@@ -112,6 +137,21 @@ echo -n "$(openssl rand -base64 32)" | \
 # Open http://35.185.61.108:5678 → Settings → API → Create API Key
 echo -n "YOUR_N8N_API_KEY_HERE" | \
   gcloud secrets create n8n-mcp-n8n-api-key \
+  --data-file=- \
+  --replication-policy="automatic" \
+  --project=abound-infr
+
+# Store GitHub OAuth credentials (for Claude Desktop OAuth authentication)
+# Create GitHub OAuth App at https://github.com/settings/developers
+# Callback URL: https://n8n-mcp.aboundtechology.com/oauth/callback
+echo -n "YOUR_GITHUB_CLIENT_ID" | \
+  gcloud secrets create n8n-mcp-github-client-id \
+  --data-file=- \
+  --replication-policy="automatic" \
+  --project=abound-infr
+
+echo -n "YOUR_GITHUB_CLIENT_SECRET" | \
+  gcloud secrets create n8n-mcp-github-client-secret \
   --data-file=- \
   --replication-policy="automatic" \
   --project=abound-infr
@@ -135,6 +175,16 @@ gcloud secrets add-iam-policy-binding n8n-mcp-n8n-api-key \
   --role="roles/secretmanager.secretAccessor" \
   --project=abound-infr
 
+gcloud secrets add-iam-policy-binding n8n-mcp-github-client-id \
+  --member="serviceAccount:$VM_SERVICE_ACCOUNT" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project=abound-infr
+
+gcloud secrets add-iam-policy-binding n8n-mcp-github-client-secret \
+  --member="serviceAccount:$VM_SERVICE_ACCOUNT" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project=abound-infr
+
 # Verify access (run this ON THE VM)
 gcloud secrets versions access latest --secret="n8n-mcp-auth-token"
 ```
@@ -145,7 +195,7 @@ gcloud secrets versions access latest --secret="n8n-mcp-auth-token"
 gcloud secrets versions access latest --secret="n8n-mcp-auth-token"
 ```
 
-### Step 4: Configure Environment with Secrets Manager
+### Step 5: Configure Environment with Secrets Manager
 
 Create a startup script that fetches secrets and configures the service:
 
@@ -169,9 +219,12 @@ echo "Loading secrets from Google Secret Manager..."
 export AUTH_TOKEN=$(gcloud secrets versions access latest --secret="n8n-mcp-auth-token" --project="$PROJECT_ID")
 export N8N_API_KEY=$(gcloud secrets versions access latest --secret="n8n-mcp-n8n-api-key" --project="$PROJECT_ID")
 
+# GitHub OAuth credentials (for Claude Desktop)
+export GITHUB_CLIENT_ID=$(gcloud secrets versions access latest --secret="n8n-mcp-github-client-id" --project="$PROJECT_ID")
+export GITHUB_CLIENT_SECRET=$(gcloud secrets versions access latest --secret="n8n-mcp-github-client-secret" --project="$PROJECT_ID")
+
 # Core configuration
 export MCP_MODE=http
-export USE_FIXED_HTTP=true
 export NODE_ENV=production
 export PORT=3000
 export HOST=0.0.0.0
@@ -183,12 +236,16 @@ export NODE_DB_PATH=/opt/ai-agent-platform/mcp-servers/n8n-mcp/data/nodes.db
 export LOG_LEVEL=info
 
 # n8n API
-export N8N_API_URL=http://localhost:5678
+export N8N_API_URL=http://35.185.61.108:5678
 export N8N_API_TIMEOUT=30000
 export N8N_API_MAX_RETRIES=3
 
+# OAuth Configuration (GitHub OAuth for Claude Desktop)
+export ENABLE_OAUTH=true
+export USE_GITHUB_OAUTH=true
+export BASE_URL=https://n8n-mcp.aboundtechology.com
+
 # Reverse Proxy
-export BASE_URL=https://n8n-mcp.your-domain.com
 export TRUST_PROXY=1
 
 echo "Secrets loaded successfully"
@@ -235,7 +292,7 @@ TRUST_PROXY=1
 ENABLE_OAUTH=true
 ```
 
-### Step 5: Create System User and Set Permissions
+### Step 6: Create System User and Set Permissions
 
 ```bash
 # Create dedicated system user
@@ -248,7 +305,7 @@ sudo chown -R n8n-mcp:n8n-mcp /opt/ai-agent-platform/mcp-servers/n8n-mcp
 sudo chmod 600 /opt/ai-agent-platform/mcp-servers/n8n-mcp/.env
 ```
 
-### Step 6: Create Systemd Service
+### Step 7: Create Systemd Service
 
 ```bash
 # Create service file
@@ -386,7 +443,7 @@ Secrets loaded successfully
 [INFO]   MCP:    http://0.0.0.0:3000/mcp
 ```
 
-### Step 7: Test Local Connection
+### Step 8: Test Local Connection
 
 ```bash
 # Test health endpoint (replace YOUR_TOKEN with your actual token)
@@ -405,7 +462,7 @@ curl -X POST http://localhost:3000/mcp \
 # Should return list of 58 MCP tools
 ```
 
-### Step 8: Configure Nginx Reverse Proxy
+### Step 9: Configure Nginx Reverse Proxy
 
 ```bash
 # Create Nginx configuration
@@ -492,7 +549,7 @@ sudo certbot --nginx -d n8n-mcp.your-domain.com
 
 Follow certbot prompts and select option to redirect HTTP to HTTPS.
 
-### Step 9: Configure Firewall
+### Step 10: Configure Firewall
 
 ```bash
 # Allow HTTPS traffic
@@ -508,7 +565,7 @@ sudo ufw enable
 sudo ufw status
 ```
 
-### Step 10: Final Testing
+### Step 11: Final Testing
 
 ```bash
 # Test public HTTPS endpoint
