@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759996981533,
+  "lastUpdate": 1759997211222,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -104,6 +104,58 @@ window.BENCHMARK_DATA = {
             "range": "0.47880000000000006",
             "unit": "ms",
             "extra": "15023 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "288204e9f1bab9853ddfd12ff12eda5309860d0d",
+          "message": "debug: add OAuth configuration logging\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-10-09T04:05:18-04:00",
+          "tree_id": "2c537c5a434b635bb44feadd4e9c8ef7070fc705",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/288204e9f1bab9853ddfd12ff12eda5309860d0d"
+        },
+        "date": 1759997210546,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0194,
+            "range": "0.31420000000000003",
+            "unit": "ms",
+            "extra": "51618 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1856,
+            "range": "0.5078",
+            "unit": "ms",
+            "extra": "314 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0047,
+            "range": "0.2551",
+            "unit": "ms",
+            "extra": "213130 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0671,
+            "range": "0.3465",
+            "unit": "ms",
+            "extra": "14906 ops/sec"
           }
         ]
       }
