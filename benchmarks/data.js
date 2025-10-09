@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760030344789,
+  "lastUpdate": 1760037791032,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -416,6 +416,58 @@ window.BENCHMARK_DATA = {
             "range": "0.3491",
             "unit": "ms",
             "extra": "14988 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "b8a8cc30869deed96a01a7d7804cf7ff9ed0be93",
+          "message": "fix: add session tracking to Windows bridge\n\n- Bridge now captures and maintains Mcp-Session-Id from server\n- Fixes 'No valid session ID provided' errors when calling tools/list\n- Session persists across multiple requests in same bridge process\n- Added logging for session ID tracking\n\nTested and verified session capture works correctly.",
+          "timestamp": "2025-10-09T15:11:00-04:00",
+          "tree_id": "f80ab8e9a4d8b37bef18f86b231f2b7bf53fea92",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/b8a8cc30869deed96a01a7d7804cf7ff9ed0be93"
+        },
+        "date": 1760037790751,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.019,
+            "range": "0.227",
+            "unit": "ms",
+            "extra": "52572 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1695,
+            "range": "0.4692000000000003",
+            "unit": "ms",
+            "extra": "316 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0046,
+            "range": "0.2657",
+            "unit": "ms",
+            "extra": "216674 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0724,
+            "range": "0.35059999999999997",
+            "unit": "ms",
+            "extra": "13815 ops/sec"
           }
         ]
       }
