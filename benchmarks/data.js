@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759998377264,
+  "lastUpdate": 1759999892651,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -208,6 +208,58 @@ window.BENCHMARK_DATA = {
             "range": "0.36619999999999997",
             "unit": "ms",
             "extra": "14947 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "39c230a0b58704e261fab0dbb2e659b1e5005540",
+          "message": "feat: integrate GitHub OAuth provider\n\n- Add GitHubOAuthProvider class for GitHub OAuth integration\n- Update oauth-integration.ts to support both custom and GitHub OAuth\n- Add USE_GITHUB_OAUTH environment variable for OAuth mode selection\n- Add /oauth/callback endpoint for GitHub OAuth flow\n- Update http-server-single-session.ts to use generic OAuthServerProvider type\n\nGitHub OAuth Flow:\n1. User initiates OAuth in Claude Desktop\n2. Server redirects to GitHub authorization page\n3. GitHub redirects back to /oauth/callback\n4. Server exchanges code for GitHub token\n5. Server generates MCP token and stores in SQLite\n6. User is redirected back to Claude Desktop with auth code\n\nRequires: GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET env vars",
+          "timestamp": "2025-10-09T04:50:00-04:00",
+          "tree_id": "19ef967b7b52c6d77384defd0e4b88f3782cab06",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/39c230a0b58704e261fab0dbb2e659b1e5005540"
+        },
+        "date": 1759999892267,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0192,
+            "range": "0.2292",
+            "unit": "ms",
+            "extra": "51949 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1644,
+            "range": "0.4777999999999998",
+            "unit": "ms",
+            "extra": "316 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0049,
+            "range": "0.2501",
+            "unit": "ms",
+            "extra": "203686 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.066,
+            "range": "0.34850000000000003",
+            "unit": "ms",
+            "extra": "15148 ops/sec"
           }
         ]
       }
