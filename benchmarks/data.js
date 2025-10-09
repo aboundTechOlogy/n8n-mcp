@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760050263602,
+  "lastUpdate": 1760050585469,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -572,6 +572,58 @@ window.BENCHMARK_DATA = {
             "range": "0.3387",
             "unit": "ms",
             "extra": "15138 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "37deb5666000b1098eaa1b679d531d9e1a2bc600",
+          "message": "chore: remove all Docker, Railway, and deprecated deployment files\n\nRemove all files not related to current WSL (stdio) and GCP (HTTP+OAuth) deployments:\n- Remove Docker deployment documentation and scripts\n- Remove Railway deployment documentation\n- Remove HTTP deployment guide (superseded by GCP_DEPLOYMENT_GUIDE.md)\n- Remove deprecated windows-bridge folder (replaced by HTTP transport)\n- Remove deploy/ folder with Docker quick-deploy script\n\nRepository now contains only files relevant to actual deployments.",
+          "timestamp": "2025-10-09T18:54:52-04:00",
+          "tree_id": "f07b3dd2ad652afc5907bf8f28cc0ea159fece54",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/37deb5666000b1098eaa1b679d531d9e1a2bc600"
+        },
+        "date": 1760050585202,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0196,
+            "range": "0.35409999999999997",
+            "unit": "ms",
+            "extra": "50960 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1587,
+            "range": "0.41590000000000016",
+            "unit": "ms",
+            "extra": "317 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0046,
+            "range": "0.2635",
+            "unit": "ms",
+            "extra": "215751 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0672,
+            "range": "0.32420000000000004",
+            "unit": "ms",
+            "extra": "14876 ops/sec"
           }
         ]
       }
