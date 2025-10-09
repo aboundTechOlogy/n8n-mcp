@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759991802066,
+  "lastUpdate": 1759996981533,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -52,6 +52,58 @@ window.BENCHMARK_DATA = {
             "range": "0.4085",
             "unit": "ms",
             "extra": "14585 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "0f102c5469fc2b411de5365ee824fa3c9ad5aeda",
+          "message": "fix: correct OAuth router options\n\n- Remove resourceServerUrl from OAuth router options\n- Fix TypeScript compilation error\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-10-09T04:01:37-04:00",
+          "tree_id": "800149d7e8c26aaba2b777c1037da8262ef98ff8",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/0f102c5469fc2b411de5365ee824fa3c9ad5aeda"
+        },
+        "date": 1759996981078,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0199,
+            "range": "0.2383",
+            "unit": "ms",
+            "extra": "50242 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1668,
+            "range": "0.4878",
+            "unit": "ms",
+            "extra": "316 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0048,
+            "range": "0.2735",
+            "unit": "ms",
+            "extra": "208013 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0666,
+            "range": "0.47880000000000006",
+            "unit": "ms",
+            "extra": "15023 ops/sec"
           }
         ]
       }
