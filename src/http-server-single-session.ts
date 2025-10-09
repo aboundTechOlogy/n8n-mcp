@@ -733,6 +733,12 @@ export class SingleSessionHTTPServer {
     const serverHost = process.env.HOST || '0.0.0.0';
     const baseUrl = process.env.BASE_URL || process.env.PUBLIC_URL || `http://${serverHost === '0.0.0.0' ? 'localhost' : serverHost}:${serverPort}`;
 
+    logger.info('OAuth configuration', {
+      enableOAuth,
+      envValue: process.env.ENABLE_OAUTH,
+      baseUrl
+    });
+
     if (enableOAuth) {
       this.oauthProvider = setupOAuthRoutes(app, {
         issuerUrl: baseUrl,
