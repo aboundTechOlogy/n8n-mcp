@@ -24,7 +24,7 @@ import {
 } from './utils/protocol-version';
 import { InstanceContext, validateInstanceContext } from './types/instance-context';
 import { setupOAuthRoutes, createOAuthAuthenticationMiddleware } from './mcp/oauth-integration.js';
-import { N8nMcpOAuthProvider } from './mcp/oauth-provider.js';
+import type { OAuthServerProvider } from '@modelcontextprotocol/sdk/server/auth/provider.js';
 
 dotenv.config();
 
@@ -84,7 +84,7 @@ export class SingleSessionHTTPServer {
   private sessionTimeout = 30 * 60 * 1000; // 30 minutes
   private authToken: string | null = null;
   private cleanupTimer: NodeJS.Timeout | null = null;
-  private oauthProvider: N8nMcpOAuthProvider | null = null;
+  private oauthProvider: OAuthServerProvider | null = null;
   
   constructor() {
     // Validate environment on construction
@@ -729,12 +729,14 @@ export class SingleSessionHTTPServer {
 
     // Setup OAuth if enabled
     const enableOAuth = process.env.ENABLE_OAUTH === 'true';
+    const useGitHubOAuth = process.env.USE_GITHUB_OAUTH === 'true';
     const serverPort = parseInt(process.env.PORT || '3000');
     const serverHost = process.env.HOST || '0.0.0.0';
     const baseUrl = process.env.BASE_URL || process.env.PUBLIC_URL || `http://${serverHost === '0.0.0.0' ? 'localhost' : serverHost}:${serverPort}`;
 
     logger.info('OAuth configuration', {
       enableOAuth,
+      useGitHub: useGitHubOAuth,
       envValue: process.env.ENABLE_OAUTH,
       baseUrl
     });
@@ -742,7 +744,8 @@ export class SingleSessionHTTPServer {
     if (enableOAuth) {
       this.oauthProvider = setupOAuthRoutes(app, {
         issuerUrl: baseUrl,
-        enableOAuth: true
+        enableOAuth: true,
+        useGitHub: useGitHubOAuth
       });
     }
     
