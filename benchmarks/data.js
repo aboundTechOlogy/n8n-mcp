@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760047506473,
+  "lastUpdate": 1760050263602,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -520,6 +520,58 @@ window.BENCHMARK_DATA = {
             "range": "0.4171",
             "unit": "ms",
             "extra": "14950 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "417aa7d20b989fb6d3512f508e37f90b1656618f",
+          "message": "docs: document GitHub OAuth as primary authentication setup\n\nUpdate all deployment documentation to reflect actual GitHub OAuth setup\nused in production. Repository now accurately mirrors the deployed configuration.\n\nChanges:\n- Add GitHub OAuth App creation step to GCP_DEPLOYMENT_GUIDE.md\n- Add GitHub OAuth secrets to Secrets Manager setup\n- Update load-secrets.sh template with GitHub OAuth variables\n- Create AUTHENTICATION_SETUP.md with all 3 auth modes\n- Create DEPLOYMENT_ARCHITECTURE.md documenting actual dual deployment\n- Create scripts/verify-gcp-setup.sh for deployment verification\n\nThis resolves documentation mismatch where GitHub OAuth implementation\nexisted in code but wasn't documented in deployment guides.",
+          "timestamp": "2025-10-09T18:49:23-04:00",
+          "tree_id": "499b32e7018286b0ae5696b71d23996efc52dd51",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/417aa7d20b989fb6d3512f508e37f90b1656618f"
+        },
+        "date": 1760050263229,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0199,
+            "range": "0.30069999999999997",
+            "unit": "ms",
+            "extra": "50316 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1643,
+            "range": "0.4992000000000001",
+            "unit": "ms",
+            "extra": "316 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0047,
+            "range": "0.46559999999999996",
+            "unit": "ms",
+            "extra": "212067 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0661,
+            "range": "0.3387",
+            "unit": "ms",
+            "extra": "15138 ops/sec"
           }
         ]
       }
