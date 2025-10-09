@@ -576,17 +576,21 @@ export class N8NDocumentationMCPServer {
         break;
       case 'n8n_stop_execution':
       case 'n8n_create_webhook':
-      case 'n8n_delete_webhook':
-      case 'n8n_list_webhooks':
       case 'n8n_get_webhook_logs':
+      case 'n8n_analyze_dependencies':
+        validationResult = ToolValidation.validateWorkflowIdParam(args);
+        break;
+      case 'n8n_delete_webhook':
+        // Requires both workflowId and webhookId
+        const workflowIdResult = Validator.validateString(args.workflowId, 'workflowId');
+        const webhookIdResult = Validator.validateString(args.webhookId, 'webhookId');
+        validationResult = Validator.combineResults(workflowIdResult, webhookIdResult);
+        break;
+      case 'n8n_list_webhooks':
       case 'n8n_activate_workflow':
       case 'n8n_deactivate_workflow':
       case 'n8n_duplicate_workflow':
         validationResult = ToolValidation.validateWorkflowId(args);
-        break;
-      case 'n8n_analyze_dependencies':
-        // Uses workflowId instead of id
-        validationResult = Validator.validateString(args['workflowId'], 'workflowId');
         break;
       case 'n8n_apply_template':
         // Requires templateId

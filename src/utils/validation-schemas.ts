@@ -290,10 +290,17 @@ export class ToolValidation {
   }
 
   /**
-   * Validate parameters for n8n workflow operations
+   * Validate parameters for n8n workflow operations (expects 'id' parameter)
    */
   static validateWorkflowId(args: any): ValidationResult {
     return Validator.validateString(args.id, 'id');
+  }
+
+  /**
+   * Validate parameters for n8n workflow operations (expects 'workflowId' parameter)
+   */
+  static validateWorkflowIdParam(args: any): ValidationResult {
+    return Validator.validateString(args.workflowId, 'workflowId');
   }
 
   /**
