@@ -4,10 +4,11 @@ Connect Cursor (WSL & Windows) and Claude Code to your remote n8n-MCP server sec
 
 ## ✅ What's Working
 
-- ✅ **Claude Desktop** - OAuth authentication
-- ✅ **Claude Code** - Shares OAuth with Claude Desktop
-- ✅ **Cursor WSL** - Direct HTTP with bearer token (configured)
-- 📝 **Cursor Windows** - Ready to configure (instructions below)
+- ✅ **Claude Desktop** - OAuth authentication (GCP server)
+- ✅ **Claude Code WSL** - Local n8n-mcp server via stdio
+- ✅ **Claude Code Windows** - GCP server via stdio bridge
+- ✅ **Cursor WSL** - Direct HTTP with bearer token (GCP server)
+- ✅ **Cursor Windows** - Direct HTTP with bearer token (GCP server)
 
 ## 🔧 Cursor WSL Setup (Already Done)
 
@@ -53,27 +54,32 @@ Create `C:\Users\<YourUsername>\.cursor\mcp.json`:
 
 Then restart Cursor Windows.
 
-## 🔧 Claude Code Setup (Already Done!)
+## 🔧 Claude Code Setup
 
-Claude Code uses OAuth authentication via Claude Desktop. If you've already connected in Claude Desktop, Claude Code will work automatically. No additional configuration needed.
-
-**Config location (Windows):** `%APPDATA%\Claude\claude_desktop_config.json`
-**Config location (Linux):** `~/.config/Claude/claude_desktop_config.json`
-
-Your existing config:
-```json
-{
-  "mcpServers": {
-    "n8n-mcp": {
-      "url": "https://n8n-mcp.aboundtechology.com/mcp",
-      "transport": {
-        "type": "http",
-        "oauth": {}
-      }
-    }
-  }
-}
+### Claude Code WSL
+Uses local n8n-mcp server via `claude mcp` CLI:
+```bash
+claude mcp list
+# Shows: n8n-mcp-enhanced: node /home/dreww/n8n-mcp/dist/mcp/index.js - ✓ Connected
 ```
+
+### Claude Code Windows (via Bridge Script)
+
+Since Claude Code only supports stdio/SSE MCP servers (not HTTP with bearer tokens), we use a bridge script.
+
+**Bridge script location:** `C:\Users\dreww\n8n-mcp-bridge.js`
+
+**Configuration:**
+```powershell
+# Add bridge to Claude Code
+claude mcp add n8n-mcp-gcp node C:\Users\dreww\n8n-mcp-bridge.js
+
+# Verify connection
+claude mcp list
+# Should show: n8n-mcp-gcp: node C:\Users\dreww\n8n-mcp-bridge.js - ✓ Connected
+```
+
+**Important:** After connecting, restart Cursor Windows or start a new Claude Code chat session to load the 58 tools.
 
 ## ✅ Testing Connections
 
