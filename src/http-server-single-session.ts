@@ -23,6 +23,8 @@ import {
   STANDARD_PROTOCOL_VERSION
 } from './utils/protocol-version';
 import { InstanceContext, validateInstanceContext } from './types/instance-context';
+import { setupOAuthRoutes, createOAuthAuthenticationMiddleware } from './mcp/oauth-integration.js';
+import { N8nMcpOAuthProvider } from './mcp/oauth-provider.js';
 
 dotenv.config();
 
@@ -82,6 +84,7 @@ export class SingleSessionHTTPServer {
   private sessionTimeout = 30 * 60 * 1000; // 30 minutes
   private authToken: string | null = null;
   private cleanupTimer: NodeJS.Timeout | null = null;
+  private oauthProvider: N8nMcpOAuthProvider | null = null;
   
   constructor() {
     // Validate environment on construction
@@ -723,6 +726,20 @@ export class SingleSessionHTTPServer {
       });
       next();
     });
+
+    // Setup OAuth if enabled
+    const enableOAuth = process.env.ENABLE_OAUTH === 'true';
+    const serverPort = parseInt(process.env.PORT || '3000');
+    const serverHost = process.env.HOST || '0.0.0.0';
+    const baseUrl = process.env.BASE_URL || process.env.PUBLIC_URL || `http://${serverHost === '0.0.0.0' ? 'localhost' : serverHost}:${serverPort}`;
+
+    if (enableOAuth) {
+      this.oauthProvider = setupOAuthRoutes(app, {
+        issuerUrl: baseUrl,
+        resourceServerUrl: `${baseUrl}/mcp`,
+        enableOAuth: true
+      });
+    }
     
     // Root endpoint with API information
     app.get('/', (req, res) => {
@@ -988,8 +1005,11 @@ export class SingleSessionHTTPServer {
     });
 
 
+    // Create OAuth-aware authentication middleware
+    const authMiddleware = createOAuthAuthenticationMiddleware(this.oauthProvider, this.authToken!);
+
     // Main MCP endpoint with authentication
-    app.post('/mcp', jsonParser, async (req: express.Request, res: express.Response): Promise<void> => {
+    app.post('/mcp', jsonParser, authMiddleware, async (req: express.Request, res: express.Response): Promise<void> => {
       // Log comprehensive debug info about the request
       logger.info('POST /mcp request received - DETAILED DEBUG', {
         headers: req.headers,
@@ -1038,66 +1058,7 @@ export class SingleSessionHTTPServer {
         });
       }
       
-      // Enhanced authentication check with specific logging
-      const authHeader = req.headers.authorization;
-      
-      // Check if Authorization header is missing
-      if (!authHeader) {
-        logger.warn('Authentication failed: Missing Authorization header', { 
-          ip: req.ip,
-          userAgent: req.get('user-agent'),
-          reason: 'no_auth_header'
-        });
-        res.status(401).json({ 
-          jsonrpc: '2.0',
-          error: {
-            code: -32001,
-            message: 'Unauthorized'
-          },
-          id: null
-        });
-        return;
-      }
-      
-      // Check if Authorization header has Bearer prefix
-      if (!authHeader.startsWith('Bearer ')) {
-        logger.warn('Authentication failed: Invalid Authorization header format (expected Bearer token)', { 
-          ip: req.ip,
-          userAgent: req.get('user-agent'),
-          reason: 'invalid_auth_format',
-          headerPrefix: authHeader.substring(0, Math.min(authHeader.length, 10)) + '...'  // Log first 10 chars for debugging
-        });
-        res.status(401).json({ 
-          jsonrpc: '2.0',
-          error: {
-            code: -32001,
-            message: 'Unauthorized'
-          },
-          id: null
-        });
-        return;
-      }
-      
-      // Extract token and trim whitespace
-      const token = authHeader.slice(7).trim();
-      
-      // Check if token matches
-      if (token !== this.authToken) {
-        logger.warn('Authentication failed: Invalid token', { 
-          ip: req.ip,
-          userAgent: req.get('user-agent'),
-          reason: 'invalid_token'
-        });
-        res.status(401).json({ 
-          jsonrpc: '2.0',
-          error: {
-            code: -32001,
-            message: 'Unauthorized'
-          },
-          id: null
-        });
-        return;
-      }
+      // Authentication is handled by middleware
       
       // Handle request with single session
       logger.info('Authentication successful - proceeding to handleRequest', {

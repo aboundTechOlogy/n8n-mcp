@@ -215,6 +215,9 @@ N8N_API_TIMEOUT=30000
 N8N_API_MAX_RETRIES=3
 BASE_URL=https://n8n-mcp.your-domain.com
 TRUST_PROXY=1
+
+# OAuth 2.0 Configuration (for Claude Desktop/ChatGPT Custom Connectors)
+ENABLE_OAUTH=true
 ```
 
 ### Step 5: Create System User and Set Permissions
@@ -510,23 +513,36 @@ curl -X POST https://n8n-mcp.your-domain.com/mcp \
 
 ## 🔌 Client Configuration
 
+### OAuth 2.0 Authentication
+
+The n8n-MCP server now supports OAuth 2.0 with Dynamic Client Registration, which is required for Claude Desktop and ChatGPT Custom Connectors. The server automatically handles the OAuth flow when `ENABLE_OAUTH=true` is set.
+
+**OAuth Endpoints** (automatically configured):
+- Authorization Server Metadata: `https://n8n-mcp.your-domain.com/.well-known/oauth-authorization-server`
+- Client Registration: `https://n8n-mcp.your-domain.com/oauth/register`
+- Authorization: `https://n8n-mcp.your-domain.com/oauth/authorize`
+- Token Exchange: `https://n8n-mcp.your-domain.com/oauth/token`
+- MCP Endpoint: `https://n8n-mcp.your-domain.com/mcp`
+
 ### Claude Desktop (Custom Connectors)
 
-**IMPORTANT**: Do NOT edit `claude_desktop_config.json`. Use the UI instead.
+**Requirements:**
+- Claude Pro, Max, Team, or Enterprise plan
+- OAuth 2.0 enabled on server (`ENABLE_OAUTH=true`)
 
+**Steps:**
 1. Open Claude Desktop
 2. Go to **Settings** > **Connectors**
 3. Click **Add Connector**
-4. Select **Custom Connector** type
-5. Fill in the form:
-   - **Name**: `n8n-mcp` (or any name you prefer)
-   - **Type**: `url`
-   - **URL**: `https://n8n-mcp.your-domain.com/mcp`
-   - **Authorization Token**: Paste your token from Step 3
-6. Click **Save**
-7. Restart Claude Desktop
+4. Enter the MCP server URL: `https://n8n-mcp.your-domain.com/mcp`
+5. Claude will automatically:
+   - Discover OAuth endpoints via server metadata
+   - Register as an OAuth client using Dynamic Client Registration
+   - Open a browser for authorization
+6. Click **Authorize** in the browser
+7. Return to Claude Desktop - the connector will be active!
 
-The connector will now appear in your Claude conversations!
+The server will issue OAuth tokens valid for 1 hour. Claude handles token refresh automatically.
 
 ### Cursor IDE
 
@@ -546,20 +562,23 @@ Similar to Cursor - use the extension's UI to add the MCP server with your token
 
 ### ChatGPT (Custom Connectors)
 
-**Available for**: ChatGPT Pro, Business, Enterprise, and Edu users
+**Requirements:**
+- ChatGPT Pro, Business, Enterprise, or Edu plan
+- OAuth 2.0 enabled on server (`ENABLE_OAUTH=true`)
 
+**Steps:**
 1. Open ChatGPT (web or desktop app)
 2. Go to **Settings** > **Connectors**
 3. Click **Add Connector** or **+ New Connector**
 4. Select **Custom Connector** type
-5. Fill in the form:
-   - **Name**: `n8n-mcp` (or any name you prefer)
-   - **Type**: `Remote MCP` or `URL`
-   - **MCP URL**: `https://n8n-mcp.your-domain.com/mcp`
-   - **Authorization Token**: Paste your token from Step 3
-   - **Icon** (optional): Upload a custom icon
-6. Click **Save**
-7. The connector will appear in your ChatGPT conversations
+5. Enter the MCP server URL: `https://n8n-mcp.your-domain.com/mcp`
+6. Select **OAuth 2.0** authentication
+7. ChatGPT will automatically:
+   - Discover OAuth endpoints via server metadata
+   - Register as an OAuth client
+   - Open authorization flow
+8. Click **Authorize** in the popup
+9. Return to ChatGPT - the connector will be active!
 
 You can now reference n8n workflows and nodes directly in ChatGPT!
 
