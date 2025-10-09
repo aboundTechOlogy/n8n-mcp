@@ -5,11 +5,26 @@ Complete guide for deploying n8n-MCP as a remote HTTP server on Google Cloud Pla
 ## 🎯 Overview
 
 This deployment will:
-- Install n8n-MCP on your GCP VM (adjacent to n8n for optimal latency)
+- Install n8n-MCP in your ai-agent-platform MCP servers directory (organized with your existing n8n infrastructure)
 - Configure HTTP server with Bearer token authentication
 - Set up systemd service for production reliability
-- Configure Nginx reverse proxy with SSL
+- Configure Caddy reverse proxy with SSL (already running)
 - Enable access via Claude Desktop Custom Connectors (no credentials in config files)
+
+## 📁 Directory Structure
+
+```
+/opt/ai-agent-platform/
+├── n8n/                           # Your n8n instance (Docker)
+├── mcp-servers/
+│   └── n8n-mcp/                  # n8n-MCP server (this deployment)
+│       ├── dist/                 # Compiled TypeScript
+│       ├── data/                 # SQLite databases
+│       ├── load-secrets.sh       # Secrets loader
+│       └── ...
+├── config/                        # Platform configurations
+└── docker-compose.yml             # n8n, postgres, caddy
+```
 
 ## ✅ Pre-Deployment Checklist
 
@@ -62,8 +77,8 @@ npm --version    # Should show 10.x.x
 
 ```bash
 # Create application directory
-sudo mkdir -p /opt/n8n-mcp
-cd /opt/n8n-mcp
+sudo mkdir -p /opt/ai-agent-platform/mcp-servers/n8n-mcp
+cd /opt/ai-agent-platform/mcp-servers/n8n-mcp
 
 # Clone repository
 sudo git clone https://github.com/czlonkowski/n8n-mcp.git .
@@ -136,7 +151,7 @@ Create a startup script that fetches secrets and configures the service:
 
 ```bash
 # Create secrets loader script
-sudo nano /opt/n8n-mcp/load-secrets.sh
+sudo nano /opt/ai-agent-platform/mcp-servers/n8n-mcp/load-secrets.sh
 ```
 
 **Paste this script:**
@@ -162,7 +177,7 @@ export PORT=3000
 export HOST=0.0.0.0
 
 # Database
-export NODE_DB_PATH=/opt/n8n-mcp/data/nodes.db
+export NODE_DB_PATH=/opt/ai-agent-platform/mcp-servers/n8n-mcp/data/nodes.db
 
 # Logging
 export LOG_LEVEL=info
@@ -179,12 +194,12 @@ export TRUST_PROXY=1
 echo "Secrets loaded successfully"
 
 # Start the application
-exec /usr/bin/node /opt/n8n-mcp/dist/mcp/index.js
+exec /usr/bin/node /opt/ai-agent-platform/mcp-servers/n8n-mcp/dist/mcp/index.js
 ```
 
 **Make the script executable:**
 ```bash
-sudo chmod +x /opt/n8n-mcp/load-secrets.sh
+sudo chmod +x /opt/ai-agent-platform/mcp-servers/n8n-mcp/load-secrets.sh
 ```
 
 **Alternative: Environment File (Less Secure)**
@@ -192,7 +207,7 @@ sudo chmod +x /opt/n8n-mcp/load-secrets.sh
 If you prefer not to use Secrets Manager, create a `.env` file:
 
 ```bash
-sudo nano /opt/n8n-mcp/.env
+sudo nano /opt/ai-agent-platform/mcp-servers/n8n-mcp/.env
 ```
 
 ```bash
@@ -201,7 +216,7 @@ USE_FIXED_HTTP=true
 NODE_ENV=production
 PORT=3000
 HOST=0.0.0.0
-NODE_DB_PATH=/opt/n8n-mcp/data/nodes.db
+NODE_DB_PATH=/opt/ai-agent-platform/mcp-servers/n8n-mcp/data/nodes.db
 LOG_LEVEL=info
 
 # Get these from:
@@ -227,10 +242,10 @@ ENABLE_OAUTH=true
 sudo useradd -r -s /bin/false n8n-mcp
 
 # Set ownership
-sudo chown -R n8n-mcp:n8n-mcp /opt/n8n-mcp
+sudo chown -R n8n-mcp:n8n-mcp /opt/ai-agent-platform/mcp-servers/n8n-mcp
 
 # Secure the .env file
-sudo chmod 600 /opt/n8n-mcp/.env
+sudo chmod 600 /opt/ai-agent-platform/mcp-servers/n8n-mcp/.env
 ```
 
 ### Step 6: Create Systemd Service
@@ -255,10 +270,10 @@ Requires=network.target
 Type=simple
 User=n8n-mcp
 Group=n8n-mcp
-WorkingDirectory=/opt/n8n-mcp
+WorkingDirectory=/opt/ai-agent-platform/mcp-servers/n8n-mcp
 
 # Use secrets loader script
-ExecStart=/opt/n8n-mcp/load-secrets.sh
+ExecStart=/opt/ai-agent-platform/mcp-servers/n8n-mcp/load-secrets.sh
 
 # Restart policy
 Restart=always
@@ -271,7 +286,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/n8n-mcp/data
+ReadWritePaths=/opt/ai-agent-platform/mcp-servers/n8n-mcp/data
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true
@@ -304,11 +319,11 @@ Requires=network.target
 Type=simple
 User=n8n-mcp
 Group=n8n-mcp
-WorkingDirectory=/opt/n8n-mcp
+WorkingDirectory=/opt/ai-agent-platform/mcp-servers/n8n-mcp
 
 # Load environment from file
-EnvironmentFile=/opt/n8n-mcp/.env
-ExecStart=/usr/bin/node /opt/n8n-mcp/dist/mcp/index.js
+EnvironmentFile=/opt/ai-agent-platform/mcp-servers/n8n-mcp/.env
+ExecStart=/usr/bin/node /opt/ai-agent-platform/mcp-servers/n8n-mcp/dist/mcp/index.js
 
 # Restart policy
 Restart=always
@@ -321,7 +336,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/n8n-mcp/data
+ReadWritePaths=/opt/ai-agent-platform/mcp-servers/n8n-mcp/data
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true
@@ -649,7 +664,7 @@ NEW_TOKEN=$(openssl rand -base64 32)
 echo "New token: $NEW_TOKEN"
 
 # 2. Update .env file
-sudo nano /opt/n8n-mcp/.env
+sudo nano /opt/ai-agent-platform/mcp-servers/n8n-mcp/.env
 # Replace AUTH_TOKEN value
 
 # 3. Restart service
@@ -690,14 +705,14 @@ sudo systemctl show n8n-mcp --property=MemoryCurrent
 top -b -n 1 | grep n8n-mcp
 
 # Disk usage
-du -sh /opt/n8n-mcp
+du -sh /opt/ai-agent-platform/mcp-servers/n8n-mcp
 ```
 
 ### Updates
 
 ```bash
 # Pull latest code
-cd /opt/n8n-mcp
+cd /opt/ai-agent-platform/mcp-servers/n8n-mcp
 sudo -u n8n-mcp git pull
 
 # Install dependencies
@@ -734,8 +749,8 @@ gcloud secrets versions access latest --secret="n8n-mcp-auth-token" --project="a
 
 # For .env file issues:
 # Fix permissions
-sudo chown -R n8n-mcp:n8n-mcp /opt/n8n-mcp
-sudo chmod 600 /opt/n8n-mcp/.env
+sudo chown -R n8n-mcp:n8n-mcp /opt/ai-agent-platform/mcp-servers/n8n-mcp
+sudo chmod 600 /opt/ai-agent-platform/mcp-servers/n8n-mcp/.env
 ```
 
 ### Authentication Failures
@@ -761,7 +776,7 @@ sudo journalctl -u n8n-mcp | grep "Authentication failed"
 
 ```bash
 # Check token in .env
-sudo cat /opt/n8n-mcp/.env | grep AUTH_TOKEN
+sudo cat /opt/ai-agent-platform/mcp-servers/n8n-mcp/.env | grep AUTH_TOKEN
 
 # Test with correct token
 curl -H "Authorization: Bearer CORRECT_TOKEN" \
@@ -814,7 +829,7 @@ curl http://localhost:5678/api/v1/workflows \
 sudo journalctl -u n8n-mcp | grep "n8n API"
 
 # Verify N8N_API_URL and N8N_API_KEY in .env
-sudo cat /opt/n8n-mcp/.env | grep N8N_API
+sudo cat /opt/ai-agent-platform/mcp-servers/n8n-mcp/.env | grep N8N_API
 ```
 
 ## 📈 Performance Optimization
