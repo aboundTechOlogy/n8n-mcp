@@ -6,7 +6,7 @@ Connect Cursor (WSL & Windows) and Claude Code to your remote n8n-MCP server sec
 
 - ✅ **Claude Desktop** - OAuth authentication (GCP server)
 - ✅ **Claude Code WSL** - Local n8n-mcp server via stdio
-- ✅ **Claude Code Windows** - GCP server via stdio bridge
+- ✅ **Claude Code Windows** - Direct HTTP with bearer token (GCP server)
 - ✅ **Cursor WSL** - Direct HTTP with bearer token (GCP server)
 - ✅ **Cursor Windows** - Direct HTTP with bearer token (GCP server)
 
@@ -63,23 +63,43 @@ claude mcp list
 # Shows: n8n-mcp-enhanced: node /home/dreww/n8n-mcp/dist/mcp/index.js - ✓ Connected
 ```
 
-### Claude Code Windows (via Bridge Script)
+### Claude Code Windows (HTTP Transport)
 
-Since Claude Code only supports stdio/SSE MCP servers (not HTTP with bearer tokens), we use a bridge script.
+Claude Code supports HTTP transport directly since June 2025. Use the `-t http` flag:
 
-**Bridge script location:** `C:\Users\dreww\n8n-mcp-bridge.js`
-
-**Configuration:**
 ```powershell
-# Add bridge to Claude Code
-claude mcp add n8n-mcp-gcp node C:\Users\dreww\n8n-mcp-bridge.js
+# Add n8n-mcp server via HTTP transport
+claude mcp add -t http n8n-mcp-gcp https://n8n-mcp.aboundtechology.com/mcp -H "Authorization: Bearer 7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8="
 
 # Verify connection
 claude mcp list
-# Should show: n8n-mcp-gcp: node C:\Users\dreww\n8n-mcp-bridge.js - ✓ Connected
+# Should show: n8n-mcp-gcp: https://n8n-mcp.aboundtechology.com/mcp (HTTP) - ✓ Connected
 ```
 
-**Important:** After connecting, restart Cursor Windows or start a new Claude Code chat session to load the 58 tools.
+**Using Environment Variables (Recommended):**
+```powershell
+# Set token in environment variable
+$env:N8N_MCP_TOKEN = "7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8="
+
+# Add server using environment variable
+claude mcp add -t http n8n-mcp-gcp https://n8n-mcp.aboundtechology.com/mcp -H "Authorization: Bearer $env:N8N_MCP_TOKEN"
+```
+
+**Important:** After adding, restart Cursor Windows or start a new Claude Code chat session to load the 58 tools.
+
+#### Migration from Bridge Script (Legacy)
+
+If you previously used the bridge script (`n8n-mcp-bridge.js`), migrate to HTTP transport:
+
+```powershell
+# Remove old bridge configuration
+claude mcp remove n8n-mcp-gcp
+
+# Add using HTTP transport (see above)
+claude mcp add -t http n8n-mcp-gcp https://n8n-mcp.aboundtechology.com/mcp -H "Authorization: Bearer 7vhfwUdE2fPpkoganiufeuuAs2G9+S7N8IAW78Jxtl8="
+```
+
+The bridge script approach is now deprecated. See [windows-bridge/README.md](./windows-bridge/README.md) for legacy documentation.
 
 ## ✅ Testing Connections
 
@@ -105,9 +125,10 @@ claude mcp list
 | Environment | Method | Security |
 |-------------|--------|----------|
 | **Claude Desktop** | OAuth | ✅ Best - No credentials in files |
-| **Claude Code** | OAuth | ✅ Best - Shared with Desktop |
-| **Cursor WSL** | Bearer Token | ⚠️ Token in user config (gitignored) |
-| **Cursor Windows** | Bearer Token | ⚠️ Token in user config (gitignored) |
+| **Claude Code WSL** | stdio (local) | ✅ No network, local only |
+| **Claude Code Windows** | HTTP Bearer | ⚠️ Token in config or env var |
+| **Cursor WSL** | HTTP Bearer | ⚠️ Token in user config (gitignored) |
+| **Cursor Windows** | HTTP Bearer | ⚠️ Token in user config (gitignored) |
 
 ### Security Notes:
 - ✅ OAuth used where supported (Claude Desktop/Code)

@@ -1,10 +1,57 @@
 # Windows Bridge for Claude Code Extension
 
-This bridge allows the Claude Code extension in Cursor Windows to connect to a remote n8n-MCP server.
+⚠️ **DEPRECATED** - This bridge script is no longer needed as of Claude Code June 2025 update.
 
-## Why is this needed?
+## 🆕 Recommended Alternative (HTTP Transport)
 
-Claude Code extension only supports stdio and SSE MCP server transports, not HTTP with bearer token authentication. This bridge converts stdio requests to HTTPS requests with proper authentication.
+Claude Code now supports HTTP transport directly. Use this instead:
+
+```powershell
+# Add n8n-mcp server via HTTP transport
+claude mcp add -t http n8n-mcp-gcp https://n8n-mcp.aboundtechology.com/mcp -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Verify connection
+claude mcp list
+# Should show: n8n-mcp-gcp: https://n8n-mcp.aboundtechology.com/mcp (HTTP) - ✓ Connected
+```
+
+**Benefits of HTTP Transport:**
+- ✅ No bridge script needed
+- ✅ Simpler configuration
+- ✅ Native Claude Code feature
+- ✅ Better error handling
+- ✅ No additional Node.js process
+
+See [SECURE_MULTI_IDE_SETUP.md](../SECURE_MULTI_IDE_SETUP.md) for complete setup instructions.
+
+---
+
+## 📚 Legacy Documentation
+
+This bridge script was created before Claude Code's HTTP transport feature was widely known. It still works but is no longer the recommended approach.
+
+### Why was this needed?
+
+Claude Code extension previously appeared to only support stdio and SSE MCP server transports. This bridge converted stdio requests to HTTPS requests with proper authentication.
+
+### Migration to HTTP Transport
+
+If you're currently using this bridge script:
+
+```powershell
+# Remove old bridge configuration
+claude mcp remove n8n-mcp-gcp
+
+# Add using HTTP transport
+claude mcp add -t http n8n-mcp-gcp https://n8n-mcp.aboundtechology.com/mcp -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Verify it works
+claude mcp list
+```
+
+---
+
+## Legacy Installation Instructions
 
 ## Installation
 
