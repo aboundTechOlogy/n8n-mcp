@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760028307605,
+  "lastUpdate": 1760030344789,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -364,6 +364,58 @@ window.BENCHMARK_DATA = {
             "range": "0.5105",
             "unit": "ms",
             "extra": "14106 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "86c3fc55836bbd100d8999faebf20b8466e008df",
+          "message": "chore: remove development-only test files and cleanup repo\n\n- Removed 35 development test scripts from scripts/ directory\n- Removed CLAUDE_DESKTOP_WSL_SETUP.md (local-specific documentation)\n- Added cleanup-repo.sh for future maintenance\n- Total: 36 files removed\n\nThis cleanup prepares the repository for forking and production deployment.\nUsers forking this repo will now only get:\n- Essential source code\n- Production deployment scripts\n- Core documentation (README, GCP deployment guide, etc.)\n- Docker configuration\n- No development test clutter\n\nBuild and tests verified working after cleanup.",
+          "timestamp": "2025-10-09T13:17:32-04:00",
+          "tree_id": "5728dd47a03b75de9d8f2eec20cbf7e93141c11f",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/86c3fc55836bbd100d8999faebf20b8466e008df"
+        },
+        "date": 1760030344090,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0238,
+            "range": "0.4953",
+            "unit": "ms",
+            "extra": "41984 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1827,
+            "range": "0.7103000000000002",
+            "unit": "ms",
+            "extra": "314 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0048,
+            "range": "0.2515",
+            "unit": "ms",
+            "extra": "208787 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0667,
+            "range": "0.3491",
+            "unit": "ms",
+            "extra": "14988 ops/sec"
           }
         ]
       }
