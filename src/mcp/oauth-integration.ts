@@ -5,7 +5,6 @@ import { logger } from '../utils/logger.js';
 
 export interface OAuthIntegrationOptions {
   issuerUrl: string;
-  resourceServerUrl: string;
   enableOAuth: boolean;
 }
 
@@ -21,20 +20,17 @@ export function setupOAuthRoutes(app: express.Application, options: OAuthIntegra
 
   try {
     const issuerUrl = new URL(options.issuerUrl);
-    const resourceServerUrl = new URL(options.resourceServerUrl);
 
     // Add MCP OAuth routes
     app.use(mcpAuthRouter({
       provider,
       issuerUrl,
-      resourceServerUrl,
       scopesSupported: ['mcp:tools', 'mcp:read', 'mcp:write'],
       resourceName: 'n8n-MCP Server',
     }));
 
     logger.info('OAuth 2.0 endpoints configured', {
       issuer: issuerUrl.toString(),
-      resource: resourceServerUrl.toString(),
       endpoints: {
         metadata: '/.well-known/oauth-authorization-server',
         register: '/oauth/register',

@@ -736,7 +736,6 @@ export class SingleSessionHTTPServer {
     if (enableOAuth) {
       this.oauthProvider = setupOAuthRoutes(app, {
         issuerUrl: baseUrl,
-        resourceServerUrl: `${baseUrl}/mcp`,
         enableOAuth: true
       });
     }
