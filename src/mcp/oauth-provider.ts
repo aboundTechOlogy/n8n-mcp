@@ -4,45 +4,38 @@ import type { OAuthClientInformationFull, OAuthTokens } from '@modelcontextproto
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import type { OAuthRegisteredClientsStore } from '@modelcontextprotocol/sdk/server/auth/clients.js';
 import { Response } from 'express';
+import { OAuthStorage } from './oauth-storage.js';
+import { logger } from '../utils/logger.js';
 
-interface CodeData {
-  client: OAuthClientInformationFull;
-  params: {
-    redirectUri: string;
-    scopes?: string[];
-    resource?: URL;
-    state?: string;
-    codeChallenge: string;
-    codeChallengeMethod?: string;
-  };
-}
-
-interface TokenData {
-  token: string;
-  clientId: string;
-  scopes: string[];
-  expiresAt: number;
-  resource?: URL;
-  type: 'access';
-}
-
-export class InMemoryClientsStore implements OAuthRegisteredClientsStore {
-  private clients = new Map<string, OAuthClientInformationFull>();
+export class PersistentClientsStore implements OAuthRegisteredClientsStore {
+  constructor(private storage: OAuthStorage) {}
 
   async getClient(clientId: string): Promise<OAuthClientInformationFull | undefined> {
-    return this.clients.get(clientId);
+    return this.storage.getClient(clientId);
   }
 
   async registerClient(clientMetadata: OAuthClientInformationFull): Promise<OAuthClientInformationFull> {
-    this.clients.set(clientMetadata.client_id, clientMetadata);
-    return clientMetadata;
+    return this.storage.registerClient(clientMetadata);
   }
 }
 
 export class N8nMcpOAuthProvider implements OAuthServerProvider {
-  private _clientsStore = new InMemoryClientsStore();
-  private codes = new Map<string, CodeData>();
-  private tokens = new Map<string, TokenData>();
+  private storage: OAuthStorage;
+  private _clientsStore: PersistentClientsStore;
+
+  constructor(dbPath?: string) {
+    this.storage = new OAuthStorage(dbPath);
+    this._clientsStore = new PersistentClientsStore(this.storage);
+
+    // Cleanup expired tokens every hour
+    setInterval(() => {
+      const deletedTokens = this.storage.cleanupExpiredTokens();
+      const deletedCodes = this.storage.cleanupExpiredCodes();
+      if (deletedTokens > 0 || deletedCodes > 0) {
+        logger.info('OAuth cleanup', { deletedTokens, deletedCodes });
+      }
+    }, 3600000);
+  }
 
   get clientsStore(): OAuthRegisteredClientsStore {
     return this._clientsStore;
@@ -67,7 +60,17 @@ export class N8nMcpOAuthProvider implements OAuthServerProvider {
       searchParams.set('state', params.state);
     }
 
-    this.codes.set(code, { client, params });
+    // Save code to storage
+    this.storage.saveCode(code, {
+      clientId: client.client_id,
+      redirectUri: params.redirectUri,
+      scopes: params.scopes?.join(' '),
+      resource: params.resource?.toString(),
+      state: params.state,
+      codeChallenge: params.codeChallenge,
+      codeChallengeMethod: params.codeChallengeMethod,
+      expiresAt: Date.now() + 600000 // 10 minutes
+    });
 
     if (!client.redirect_uris.includes(params.redirectUri)) {
       throw new Error('Unregistered redirect_uri');
@@ -82,11 +85,11 @@ export class N8nMcpOAuthProvider implements OAuthServerProvider {
     client: OAuthClientInformationFull,
     authorizationCode: string
   ): Promise<string> {
-    const codeData = this.codes.get(authorizationCode);
+    const codeData = this.storage.getCode(authorizationCode);
     if (!codeData) {
       throw new Error('Invalid authorization code');
     }
-    return codeData.params.codeChallenge;
+    return codeData.codeChallenge;
   }
 
   async exchangeAuthorizationCode(
@@ -96,34 +99,37 @@ export class N8nMcpOAuthProvider implements OAuthServerProvider {
     _redirectUri?: string,
     _resource?: URL
   ): Promise<OAuthTokens> {
-    const codeData = this.codes.get(authorizationCode);
+    const codeData = this.storage.getCode(authorizationCode);
     if (!codeData) {
       throw new Error('Invalid authorization code');
     }
 
-    if (codeData.client.client_id !== client.client_id) {
+    if (codeData.clientId !== client.client_id) {
       throw new Error('Authorization code was not issued to this client');
     }
 
-    this.codes.delete(authorizationCode);
+    this.storage.deleteCode(authorizationCode);
 
     const token = randomUUID();
-    const tokenData: TokenData = {
-      token,
-      clientId: client.client_id,
-      scopes: codeData.params.scopes || [],
-      expiresAt: Date.now() + 3600000, // 1 hour
-      resource: codeData.params.resource,
-      type: 'access',
-    };
+    const scopes = codeData.scopes ? codeData.scopes.split(' ') : [];
 
-    this.tokens.set(token, tokenData);
+    this.storage.saveToken(token, {
+      clientId: client.client_id,
+      scopes: codeData.scopes || '',
+      expiresAt: Date.now() + 3600000, // 1 hour
+      resource: codeData.resource
+    });
+
+    logger.info('OAuth token issued', {
+      clientId: client.client_id,
+      expiresIn: 3600
+    });
 
     return {
       access_token: token,
       token_type: 'bearer',
       expires_in: 3600,
-      scope: (codeData.params.scopes || []).join(' '),
+      scope: scopes.join(' '),
     };
   }
 
@@ -137,21 +143,21 @@ export class N8nMcpOAuthProvider implements OAuthServerProvider {
   }
 
   async verifyAccessToken(token: string): Promise<AuthInfo> {
-    const tokenData = this.tokens.get(token);
-    if (!tokenData || tokenData.expiresAt < Date.now()) {
+    const tokenData = this.storage.getToken(token);
+    if (!tokenData) {
       throw new Error('Invalid or expired token');
     }
 
     return {
       token,
       clientId: tokenData.clientId,
-      scopes: tokenData.scopes,
+      scopes: tokenData.scopes ? tokenData.scopes.split(' ') : [],
       expiresAt: Math.floor(tokenData.expiresAt / 1000),
-      resource: tokenData.resource,
+      resource: tokenData.resource ? new URL(tokenData.resource) : undefined,
     };
   }
 
-  getClientsStore(): InMemoryClientsStore {
-    return this._clientsStore;
+  close(): void {
+    this.storage.close();
   }
 }
