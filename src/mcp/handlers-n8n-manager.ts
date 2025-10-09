@@ -1966,8 +1966,8 @@ export async function handleDiagnostic(request: any, context?: InstanceContext):
   }
   
   // Check which tools are available
-  const documentationTools = 22; // Base documentation tools
-  const managementTools = apiConfigured ? 16 : 0;
+  const documentationTools = 24; // Base documentation tools (list_nodes, get_node_info, search_nodes, list_ai_tools, get_node_documentation, get_database_statistics, get_node_essentials, search_node_properties, get_node_for_task, list_tasks, validate_node_operation, validate_node_minimal, get_property_dependencies, get_node_as_tool_info, list_templates, list_node_templates, get_template, search_templates, get_templates_for_task, search_templates_by_metadata, validate_workflow, validate_workflow_connections, validate_workflow_expressions, tools_documentation)
+  const managementTools = apiConfigured ? 34 : 0; // n8n API management tools (n8n_create_workflow, n8n_get_workflow, n8n_get_workflow_details, n8n_get_workflow_structure, n8n_get_workflow_minimal, n8n_update_full_workflow, n8n_update_partial_workflow, n8n_delete_workflow, n8n_list_workflows, n8n_validate_workflow, n8n_autofix_workflow, n8n_trigger_webhook_workflow, n8n_get_execution, n8n_list_executions, n8n_delete_execution, n8n_retry_execution, n8n_cancel_execution, n8n_stop_execution, n8n_get_execution_data, n8n_get_execution_logs, n8n_create_webhook, n8n_delete_webhook, n8n_list_webhooks, n8n_test_webhook, n8n_get_webhook_logs, n8n_activate_workflow, n8n_deactivate_workflow, n8n_duplicate_workflow, n8n_apply_template, n8n_create_template, n8n_analyze_dependencies, n8n_health_check, n8n_list_available_tools, n8n_diagnostic)
   const totalTools = documentationTools + managementTools;
   
   // Build diagnostic report
