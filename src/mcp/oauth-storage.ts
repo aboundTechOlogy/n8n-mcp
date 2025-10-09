@@ -123,8 +123,22 @@ export class OAuthStorage {
   }
 
   getCode(code: string): StoredCode | undefined {
-    const row = this.db.prepare('SELECT * FROM oauth_codes WHERE code = ? AND expires_at > ?').get(code, Date.now()) as StoredCode | undefined;
-    return row;
+    const row = this.db.prepare('SELECT * FROM oauth_codes WHERE code = ? AND expires_at > ?').get(code, Date.now()) as any;
+    if (!row) return undefined;
+
+    // Convert snake_case database columns to camelCase
+    return {
+      code: row.code,
+      clientId: row.client_id,
+      redirectUri: row.redirect_uri,
+      scopes: row.scopes,
+      resource: row.resource,
+      state: row.state,
+      codeChallenge: row.code_challenge,
+      codeChallengeMethod: row.code_challenge_method,
+      createdAt: row.created_at,
+      expiresAt: row.expires_at
+    };
   }
 
   deleteCode(code: string): void {
@@ -148,8 +162,18 @@ export class OAuthStorage {
   }
 
   getToken(token: string): StoredToken | undefined {
-    const row = this.db.prepare('SELECT * FROM oauth_tokens WHERE token = ? AND expires_at > ?').get(token, Date.now()) as StoredToken | undefined;
-    return row;
+    const row = this.db.prepare('SELECT * FROM oauth_tokens WHERE token = ? AND expires_at > ?').get(token, Date.now()) as any;
+    if (!row) return undefined;
+
+    // Convert snake_case database columns to camelCase
+    return {
+      token: row.token,
+      clientId: row.client_id,
+      scopes: row.scopes,
+      expiresAt: row.expires_at,
+      resource: row.resource,
+      createdAt: row.created_at
+    };
   }
 
   deleteToken(token: string): void {
