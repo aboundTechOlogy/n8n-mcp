@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760026275995,
+  "lastUpdate": 1760028307605,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -312,6 +312,58 @@ window.BENCHMARK_DATA = {
             "range": "0.3811",
             "unit": "ms",
             "extra": "15088 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "cd547fa9c547eec859ad69718c5c7ee48e85e00f",
+          "message": "fix: correct tool counts in n8n_diagnostic\n\n- Update documentationTools count from 22 to 24\n- Update managementTools count from 16 to 34\n- Total tools now correctly reported as 58 (was incorrectly 38)\n\nRoot cause: Hardcoded tool counts were outdated after adding new tools\n- Added 2 documentation tools (tools_documentation + 1 other)\n- Added 18 management tools (workflow diff, autofix, webhooks, etc.)\n\nThis fixes the discrepancy where diagnostic reported 38 tools but 58 were actually available",
+          "timestamp": "2025-10-09T12:43:29-04:00",
+          "tree_id": "4a39944239425bb8dff4233c731dfb8debdcce7e",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/cd547fa9c547eec859ad69718c5c7ee48e85e00f"
+        },
+        "date": 1760028307143,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0192,
+            "range": "0.4041",
+            "unit": "ms",
+            "extra": "51957 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.221,
+            "range": "0.7199",
+            "unit": "ms",
+            "extra": "310 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0048,
+            "range": "0.2975",
+            "unit": "ms",
+            "extra": "209154 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0709,
+            "range": "0.5105",
+            "unit": "ms",
+            "extra": "14106 ops/sec"
           }
         ]
       }
