@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759997211222,
+  "lastUpdate": 1759998377264,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -156,6 +156,58 @@ window.BENCHMARK_DATA = {
             "range": "0.3465",
             "unit": "ms",
             "extra": "14906 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "3fcf82820b699effe9290f29de0941866df5234e",
+          "message": "feat: implement persistent OAuth token storage\n\n- Add SQLite-based OAuth storage for tokens, codes, and clients\n- Tokens and registrations survive server restarts\n- Automatic cleanup of expired tokens and codes\n- Store OAuth database in data/oauth.db\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-10-09T04:24:40-04:00",
+          "tree_id": "6dc1e4e9fcbaffbafe62a3a318971aba7bf9a978",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/3fcf82820b699effe9290f29de0941866df5234e"
+        },
+        "date": 1759998376849,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0192,
+            "range": "0.45030000000000003",
+            "unit": "ms",
+            "extra": "52062 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.2044,
+            "range": "0.5901000000000001",
+            "unit": "ms",
+            "extra": "312 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0047,
+            "range": "0.3141",
+            "unit": "ms",
+            "extra": "213803 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0669,
+            "range": "0.36619999999999997",
+            "unit": "ms",
+            "extra": "14947 ops/sec"
           }
         ]
       }
