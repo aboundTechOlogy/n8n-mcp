@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759999892651,
+  "lastUpdate": 1760026275995,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -260,6 +260,58 @@ window.BENCHMARK_DATA = {
             "range": "0.34850000000000003",
             "unit": "ms",
             "extra": "15148 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "c9d74ce935a702023d1d22ea4da7615ff504f388",
+          "message": "fix: convert database snake_case columns to camelCase\n\n- Fix OAuth storage getCode() to convert snake_case columns to camelCase\n- Fix OAuth storage getToken() to convert snake_case columns to camelCase\n- Resolves NOT NULL constraint error when saving MCP auth codes\n- GitHub OAuth callback now properly accesses authRequest.clientId\n\nRoot cause: SQLite returns columns in snake_case (client_id, redirect_uri, etc.)\nbut code was expecting camelCase (clientId, redirectUri, etc.)",
+          "timestamp": "2025-10-09T12:09:44-04:00",
+          "tree_id": "618bc2f503f31db2f664e4cec3439ee6b1012e63",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/c9d74ce935a702023d1d22ea4da7615ff504f388"
+        },
+        "date": 1760026275660,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0202,
+            "range": "0.2973",
+            "unit": "ms",
+            "extra": "49387 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.4929,
+            "range": "2.6997",
+            "unit": "ms",
+            "extra": "286 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0049,
+            "range": "0.2658",
+            "unit": "ms",
+            "extra": "206055 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0663,
+            "range": "0.3811",
+            "unit": "ms",
+            "extra": "15088 ops/sec"
           }
         ]
       }
