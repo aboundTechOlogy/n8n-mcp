@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760050585469,
+  "lastUpdate": 1760176689544,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -624,6 +624,58 @@ window.BENCHMARK_DATA = {
             "range": "0.32420000000000004",
             "unit": "ms",
             "extra": "14876 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "1fe4c04e13257c3718271f330036e6a17389be5d",
+          "message": "Update n8n to 1.114.4 to include Data Tables node",
+          "timestamp": "2025-10-11T05:56:21-04:00",
+          "tree_id": "e788c06e6018bbfacc7a10e8dcb964be1879a03d",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/1fe4c04e13257c3718271f330036e6a17389be5d"
+        },
+        "date": 1760176688861,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0193,
+            "range": "0.25860000000000005",
+            "unit": "ms",
+            "extra": "51906 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1657,
+            "range": "0.4192",
+            "unit": "ms",
+            "extra": "316 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0046,
+            "range": "0.2667",
+            "unit": "ms",
+            "extra": "215999 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0657,
+            "range": "0.33080000000000004",
+            "unit": "ms",
+            "extra": "15225 ops/sec"
           }
         ]
       }
