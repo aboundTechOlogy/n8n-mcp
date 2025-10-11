@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760176689544,
+  "lastUpdate": 1760177269968,
   "repoUrl": "https://github.com/aboundTechOlogy/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -676,6 +676,58 @@ window.BENCHMARK_DATA = {
             "range": "0.33080000000000004",
             "unit": "ms",
             "extra": "15225 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "committer": {
+            "email": "andrew@aboundtechology.com",
+            "name": "Andrew",
+            "username": "aboundTechOlogy"
+          },
+          "distinct": true,
+          "id": "666a1d9d0007afc3472b21c78affa091b5edc7b1",
+          "message": "Rollback to n8n 1.113.3 due to segfault in 1.114.4 rebuild process",
+          "timestamp": "2025-10-11T06:06:19-04:00",
+          "tree_id": "96c6f976d303724579914c428f046bfd04396aad",
+          "url": "https://github.com/aboundTechOlogy/n8n-mcp/commit/666a1d9d0007afc3472b21c78affa091b5edc7b1"
+        },
+        "date": 1760177269330,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0192,
+            "range": "0.28769999999999996",
+            "unit": "ms",
+            "extra": "52126 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1946,
+            "range": "0.5823999999999998",
+            "unit": "ms",
+            "extra": "313 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0047,
+            "range": "0.2547",
+            "unit": "ms",
+            "extra": "214443 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0688,
+            "range": "0.3177",
+            "unit": "ms",
+            "extra": "14536 ops/sec"
           }
         ]
       }
